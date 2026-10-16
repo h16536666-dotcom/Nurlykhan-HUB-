@@ -9,35 +9,51 @@ local HttpService = game:GetService("HttpService")
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
--- Әдепкі басты пароль (админ панельден өзгере алады)
+-- Әдепкі басты пароль
 local currentPassword = "1921"
 
--- Базадан ортақ парольді тексеріп тұру
-task.spawn(function()
-    pcall(function()
-        local response = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
-        if response and response.StatusCode == 200 then
-            local data = HttpService:JSONDecode(response.Body)
-            if data and type(data) == "string" then
-                currentPassword = data
-            end
+-- Базадан парольді тексеріп алу
+pcall(function()
+    local response = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
+    if response and response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        if data and type(data) == "string" then
+            currentPassword = data
         end
-    end)
+    end
 end)
 
--- 2. GitHub сілтемесі
-local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Nurlykhan-HUB-/refs/heads/main/Egg%20Roblox%20Delta%20script.lua"
+-- 2. GitHub сілтемесі (Сіз жіберген тура сілтеме)
+local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
 -- 3. Негізгі скриптті жүктеу функциясы
 local function startMainScript()
-    for _ = 1, 3 do
-        local ok, source = pcall(game.HttpGet, game, HUB_URL)
-        if ok and type(source) == "string" and source ~= "" then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Nurlykhan HUB 👑",
+        Text = "Скрипт жүктелуде...",
+        Duration = 3
+    })
+
+    local success, err = pcall(function()
+        local source = game:HttpGet(HUB_URL)
+        if source and source ~= "" then
             local chunk = loadstring(source)
-            if chunk then chunk() end
-            return
+            if chunk then
+                chunk()
+            else
+                error("Loadstring қатесі!")
+            end
+        else
+            error("GitHub файлы табылмады!")
         end
-        task.wait(0.5)
+    end)
+
+    if not success then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Қате орын алды ❌",
+            Text = tostring(err),
+            Duration = 6
+        })
     end
 end
 
@@ -92,21 +108,12 @@ local function createFireworks()
     end)
 end
 
--- Админ тарапынан берілген командаларды бақылау (Kick, Notification, Пароль өзгеруі)
+-- 5. Админ командаларын бақылау
 local function listenToAdminCommands()
     task.spawn(function()
         while true do
+            task.wait(5)
             pcall(function()
-                -- Парольдің админ арқылы өзгергенін тексеру
-                local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
-                if passRes and passRes.StatusCode == 200 then
-                    local newPass = HttpService:JSONDecode(passRes.Body)
-                    if newPass and type(newPass) == "string" then
-                        currentPassword = newPass
-                    end
-                end
-
-                -- Жеке командаларды тексеру (Kick, Хабарлама)
                 local response = request({
                     Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json",
                     Method = "GET"
@@ -133,23 +140,18 @@ local function listenToAdminCommands()
                     end
                 end
             end)
-            task.wait(5)
         end
     end)
 end
 
--- 5. Пароль енгізу интерфейсі (GUI)
+-- 6. Пароль енгізу GUI
 local CoreGui = game:GetService("CoreGui")
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NurlykhanHubPass"
 ScreenGui.ResetOnSpawn = false
 
-pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 300, 0, 180)
@@ -159,10 +161,7 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
@@ -184,10 +183,7 @@ PassBox.Text = ""
 PassBox.TextSize = 16
 PassBox.Font = Enum.Font.SourceSans
 PassBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 8)
-BoxCorner.Parent = PassBox
+Instance.new("UICorner", PassBox).CornerRadius = UDim.new(0, 8)
 
 local SubmitBtn = Instance.new("TextButton")
 SubmitBtn.Size = UDim2.new(0.8, 0, 0, 35)
@@ -198,35 +194,27 @@ SubmitBtn.Text = "Кіру"
 SubmitBtn.TextSize = 18
 SubmitBtn.Font = Enum.Font.SourceSansBold
 SubmitBtn.Parent = MainFrame
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 8)
-BtnCorner.Parent = SubmitBtn
-
--- 6. Парольді тексеру (админ өзгертетін жаңа парольді тексеру)
+-- Пароль тексеру
 SubmitBtn.MouseButton1Click:Connect(function()
     if PassBox.Text == currentPassword then
         ScreenGui:Destroy()
         
-        -- Базаға активті қолданушы ретінде тіркелу
-        pcall(function()
-            request({
-                Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json",
-                Method = "PUT",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode({Username = LocalPlayer.Name, Time = os.time(), Kick = false})
-            })
+        -- Firebase-ке кіргенін тіркеу
+        task.spawn(function()
+            pcall(function()
+                request({
+                    Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json",
+                    Method = "PUT",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = HttpService:JSONEncode({Username = LocalPlayer.Name, Time = os.time(), Kick = false})
+                })
+            end)
         end)
         
         listenToAdminCommands()
         createFireworks()
-        
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Nurlykhan HUB 👑",
-            Text = "Nurlykhan script жүктелді!",
-            Duration = 5
-        })
-        
         startMainScript()
     else
         SubmitBtn.Text = "Пароль қате!"
