@@ -72,8 +72,8 @@ if updateData.Enabled == true then
     return -- Скрипт тоқтатылады
 end
 
--- Қосылатын екі скрипт сілтемелері (Жұмыс істейтін жаңа сілтеме)
-local HUB_URL_1 = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
+-- Қосылатын екі скрипт сілтемелері (1: VenyxHub, 2: Miranda Hub)
+local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Venyx/main/VenyxHub"
 local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
 
 local function showUpdateScreen()
@@ -143,7 +143,7 @@ local function showUpdateScreen()
             Duration = 4
         })
 
-        -- 1-ші скриптті іске қосу
+        -- 1-ші скриптті іске қосу (VenyxHub)
         task.spawn(function()
             pcall(function()
                 local source1 = game:HttpGet(HUB_URL_1)
