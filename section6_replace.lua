@@ -99,7 +99,7 @@ local function listenToAdminCommands()
         while true do
             task.wait(5)
             pcall(function()
-                -- 1. Тегін уақыттың аяқталуын тексеру (22:00-ден асқанда Kick)
+                -- 1. Тегін уақыттың аяқталуын тексеру
                 local freeCheck = request({ Url = SETTINGS_URL .. "/FreeEvent.json", Method = "GET" })
                 if freeCheck and freeCheck.StatusCode == 200 then
                     local fData = HttpService:JSONDecode(freeCheck.Body)
@@ -146,7 +146,7 @@ local function listenToAdminCommands()
     end)
 end
 
--- Ойыншының жүктелуін тіркеу
+-- Ойыншының жүктелуін тіркеу (Тек LocalPlayer.Name арқылы нақты ат жазылады)
 local function registerActiveUser()
     task.spawn(function()
         pcall(function()
@@ -250,4 +250,3 @@ else
         end
     end)
 end
-
