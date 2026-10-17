@@ -31,7 +31,7 @@ end)
 
 -- Қосылатын екі скрипт сілтемелері
 local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Venyx/main/VenyxHub"
-local HUB_URL_2 = "https://api.luarmor.net/files/v4/loaders/7891557d7950ed56a7d1d8f57b66ad4d.lua"
+local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
 
 -- Жаңарту экран терезесі (Загрузка және Дисклеймер)
 local function showUpdateScreen()
@@ -95,31 +95,30 @@ local function showUpdateScreen()
 
         UpdGui:Destroy()
 
-        -- Хабарлама
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Nurlykhan HUB 👑",
-            Text = "Барлық жаңартылған скриптер қосылды!",
+            Text = "Барлық скриптер сәтті қосылды!",
             Duration = 4
         })
 
         -- 1-ші скриптті іске қосу (Venyx)
-        pcall(function()
-            local source1 = game:HttpGet(HUB_URL_1)
-            if source1 and source1 ~= "" then
-                local chunk1 = loadstring(source1)
-                if chunk1 then chunk1() end
-            end
+        task.spawn(function()
+            pcall(function()
+                local source1 = game:HttpGet(HUB_URL_1)
+                if source1 and source1 ~= "" then
+                    loadstring(source1)()
+                end
+            end)
         end)
 
-        -- 2-ші скриптті қатар іске қосу (Luarmor)
-        pcall(function()
-            -- Егер key қажет болса келесі жолға жазуға болады:
-            -- getgenv().script_key = "KEY"
-            local source2 = game:HttpGet(HUB_URL_2)
-            if source2 and source2 ~= "" then
-                local chunk2 = loadstring(source2)
-                if chunk2 then chunk2() end
-            end
+        -- 2-ші скриптті қатар іске қосу (Miranda Hub)
+        task.spawn(function()
+            pcall(function()
+                local source2 = game:HttpGet(HUB_URL_2)
+                if source2 and source2 ~= "" then
+                    loadstring(source2)()
+                end
+            end)
         end)
     end)
 end
@@ -139,7 +138,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- Таңғы 8:00-ге дейінгі уақытты тексеру логикасы (08:00-ге дейін еркін ойнай береді)
+-- Таңғы 8:00-ге дейінгі уақытты тексеру логикасы
 local currentHour = tonumber(os.date("%H"))
 local isBeforeMorning = false
 
@@ -147,7 +146,6 @@ if currentHour and currentHour < 8 then
     isBeforeMorning = true
 end
 
--- Таңғы 8-ден бұрын болса немесе пароль "NONE" болса — пароль сұрамайды
 if isBeforeMorning or currentPassword == "NONE" then
     if isBeforeMorning then
         game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -158,7 +156,6 @@ if isBeforeMorning or currentPassword == "NONE" then
     end
     registerActiveUser()
 else
-    -- Пароль сұрау терезесі
     local CoreGui = game:GetService("CoreGui")
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NurlykhanHubPass"
