@@ -10,9 +10,9 @@ local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
 local currentPassword = "1921"
-local freeEvent = {Enabled = false, Start = 0, End = 0}
+local updateData = {Enabled = false, Message = ""}
 
--- Базадан пароль мен уақытты жүктеу
+-- Базадан ақпаратты тексеру
 pcall(function()
     local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
     if passRes and passRes.StatusCode == 200 then
@@ -22,18 +22,61 @@ pcall(function()
         end
     end
 
-    local freeRes = request({ Url = SETTINGS_URL .. "/FreeEvent.json", Method = "GET" })
-    if freeRes and freeRes.StatusCode == 200 then
-        local fData = HttpService:JSONDecode(freeRes.Body)
-        if type(fData) == "table" then freeEvent = fData end
+    local updateRes = request({ Url = SETTINGS_URL .. "/UpdateData.json", Method = "GET" })
+    if updateRes and updateRes.StatusCode == 200 then
+        local uData = HttpService:JSONDecode(updateRes.Body)
+        if type(uData) == "table" then updateData = uData end
     end
 end)
 
--- Қосылатын екі скрипт сілтемелері
+-- Егер админ жаңарту режимін қосқан болса — скрипт қосылмай, тек сен жазған хабарлама мен уақыт/күн экранда тұрады
+if updateData.Enabled == true then
+    local CoreGui = game:GetService("CoreGui")
+    local LockGui = Instance.new("ScreenGui")
+    LockGui.Name = "NurlykhanLockGui"
+    LockGui.ResetOnSpawn = false
+
+    pcall(function() LockGui.Parent = CoreGui end)
+    if not LockGui.Parent then LockGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 440, 0, 220)
+    MainFrame.Position = UDim2.new(0.5, -220, 0.5, -110)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = LockGui
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 45)
+    Title.BackgroundTransparency = 1
+    Title.Text = "🚨 NURLYKHAN HUB - ЖАҢАРТУ ЖҮРІП ЖАТЫР 🚨"
+    Title.TextColor3 = Color3.fromRGB(255, 150, 0)
+    Title.TextSize = 15
+    Title.Font = Enum.Font.SourceSansBold
+    Title.Parent = MainFrame
+
+    local MsgLabel = Instance.new("TextLabel")
+    MsgLabel.Size = UDim2.new(0.9, 0, 0, 120)
+    MsgLabel.Position = UDim2.new(0.05, 0, 0.25, 0)
+    MsgLabel.BackgroundTransparency = 1
+    MsgLabel.Text = tostring(updateData.Message) -- Админ жазған күн, сағат және хабарлама осында шығады!
+    MsgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MsgLabel.TextSize = 14
+    MsgLabel.Font = Enum.Font.SourceSansBold
+    MsgLabel.TextWrapped = true
+    MsgLabel.Parent = MainFrame
+
+    -- Скрипт тоқтатылады да, басқа ештеңе қосылмайды
+    return 
+end
+
+-- Қосылатын екі скрипт сілтемелері (Жаңарту тоқтатылып, қалыпты жұмыс істеген кезде)
 local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Venyx/main/VenyxHub"
 local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
 
--- Жаңарту экран терезесі (Загрузка және Дисклеймер)
 local function showUpdateScreen()
     local CoreGui = game:GetService("CoreGui")
     local UpdGui = Instance.new("ScreenGui")
@@ -66,7 +109,7 @@ local function showUpdateScreen()
     Desc.Size = UDim2.new(0.9, 0, 0, 110)
     Desc.Position = UDim2.new(0.05, 0, 0.2, 0)
     Desc.BackgroundTransparency = 1
-    Desc.Text = "Бәріңе сәлем ойыншылар!\nСкрипт жаңартылды, қалай, скрипт жақсы ма?\nБірақ жұмыртқа ұшып ұрлайтын істей қалады, оны түзеді бірақ түзелген жоқ, сондықтан ұшатын істемейді.\nЖаңару таңғы 8:00-ге дейін қойылады, оған дейін бұрынғысынша ойнай бересіздер.\nЖаңару ұнаса чатқа 'ұнады' деп жазыңыз!"
+    Desc.Text = "Бәріңе сәлем ойыншылар!\nСкрипт жаңартылды, қалай, скрипт жақсы ма?\nБірақ жұмыртқа ұшып ұрлайтын істей қалады, оны түзеді бірақ түзелген жоқ, сондықтан ұшатын істемейді.\nЖаңару уақыты аяқталды, қазір қосыласыз!\nЖаңару ұнаса чатқа 'ұнады' деп жазыңыз!"
     Desc.TextColor3 = Color3.fromRGB(255, 255, 255)
     Desc.TextSize = 12
     Desc.Font = Enum.Font.SourceSans
@@ -78,7 +121,7 @@ local function showUpdateScreen()
     UpdateBtn.Position = UDim2.new(0.05, 0, 0.72, 0)
     UpdateBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     UpdateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    UpdateBtn.Text = "🔥 Скриптті жаңарту (Жаңаруды қосу)"
+    UpdateBtn.Text = "🔥 Скриптті қосу (Загрузка)"
     UpdateBtn.TextSize = 14
     UpdateBtn.Font = Enum.Font.SourceSansBold
     UpdateBtn.Parent = MainFrame
@@ -87,7 +130,7 @@ local function showUpdateScreen()
     UpdateBtn.MouseButton1Click:Connect(function()
         UpdateBtn.Visible = false
         
-        -- 10 секундтық загрузка (таймер)
+        -- 10 секундтық загрузка
         for i = 10, 1, -1 do
             Title.Text = "⏳ Загрузка жүріп жатыр: " .. i .. " сек..."
             task.wait(1)
@@ -95,29 +138,19 @@ local function showUpdateScreen()
 
         UpdGui:Destroy()
 
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Nurlykhan HUB 👑",
-            Text = "Барлық скриптер сәтті қосылды!",
-            Duration = 4
-        })
-
-        -- 1-ші скриптті іске қосу (Venyx)
+        -- 1-ші скриптті іске қосу
         task.spawn(function()
             pcall(function()
                 local source1 = game:HttpGet(HUB_URL_1)
-                if source1 and source1 ~= "" then
-                    loadstring(source1)()
-                end
+                if source1 and source1 ~= "" then loadstring(source1)() end
             end)
         end)
 
-        -- 2-ші скриптті қатар іске қосу (Miranda Hub)
+        -- 2-ші скриптті іске қосу
         task.spawn(function()
             pcall(function()
                 local source2 = game:HttpGet(HUB_URL_2)
-                if source2 and source2 ~= "" then
-                    loadstring(source2)()
-                end
+                if source2 and source2 ~= "" then loadstring(source2)() end
             end)
         end)
     end)
@@ -138,22 +171,8 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- Таңғы 8:00-ге дейінгі уақытты тексеру логикасы
-local currentHour = tonumber(os.date("%H"))
-local isBeforeMorning = false
-
-if currentHour and currentHour < 8 then
-    isBeforeMorning = true
-end
-
-if isBeforeMorning or currentPassword == "NONE" then
-    if isBeforeMorning then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "🌅 ТАҢҒЫ РЕЖИМ!",
-            Text = "Таңғы 8:00-ге дейін еркін қосылдыңыз!",
-            Duration = 6
-        })
-    end
+-- Пароль сұрау логикасы
+if currentPassword == "NONE" then
     registerActiveUser()
 else
     local CoreGui = game:GetService("CoreGui")
