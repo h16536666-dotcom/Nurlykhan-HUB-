@@ -12,7 +12,7 @@ local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 local currentPassword = "1921"
 local updateData = {Enabled = false, Message = ""}
 
--- Базадан ақпаратты тексеру
+-- Базадан пароль мен жаңарту режимін тексеру
 pcall(function()
     local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
     if passRes and passRes.StatusCode == 200 then
@@ -29,7 +29,7 @@ pcall(function()
     end
 end)
 
--- Егер админ жаңарту режимін қосқан болса — скрипт қосылмай, тек сен жазған хабарлама мен уақыт/күн экранда тұрады
+-- Егер админ панельден жаңарту режимі қосылса — ойыншыға тек сен жазған хабарлама шығады
 if updateData.Enabled == true then
     local CoreGui = game:GetService("CoreGui")
     local LockGui = Instance.new("ScreenGui")
@@ -69,12 +69,11 @@ if updateData.Enabled == true then
     MsgLabel.TextWrapped = true
     MsgLabel.Parent = MainFrame
 
-    -- Скрипт тоқтатылады да, басқа ештеңе қосылмайды
-    return 
+    return -- Скрипт тоқтатылады
 end
 
--- Қосылатын екі скрипт сілтемелері (Жаңарту тоқтатылып, қалыпты жұмыс істеген кезде)
-local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Venyx/main/VenyxHub"
+-- Қосылатын екі скрипт сілтемелері (Жұмыс істейтін жаңа сілтеме)
+local HUB_URL_1 = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
 
 local function showUpdateScreen()
@@ -130,13 +129,19 @@ local function showUpdateScreen()
     UpdateBtn.MouseButton1Click:Connect(function()
         UpdateBtn.Visible = false
         
-        -- 10 секундтық загрузка
+        -- 10 секундтық таймер (Загрузка)
         for i = 10, 1, -1 do
             Title.Text = "⏳ Загрузка жүріп жатыр: " .. i .. " сек..."
             task.wait(1)
         end
 
         UpdGui:Destroy()
+
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Nurlykhan HUB 👑",
+            Text = "Барлық скриптер сәтті қосылды!",
+            Duration = 4
+        })
 
         -- 1-ші скриптті іске қосу
         task.spawn(function()
@@ -146,7 +151,7 @@ local function showUpdateScreen()
             end)
         end)
 
-        -- 2-ші скриптті іске қосу
+        -- 2-ші скриптті іске қосу (Miranda Hub)
         task.spawn(function()
             pcall(function()
                 local source2 = game:HttpGet(HUB_URL_2)
@@ -171,7 +176,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- Пароль сұрау логикасы
+-- Пароль арқылы кіргізу
 if currentPassword == "NONE" then
     registerActiveUser()
 else
