@@ -9,10 +9,23 @@ local HttpService = game:GetService("HttpService")
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
+-- Скрипттер сілтемесі (Chilli Hub және Miranda Hub)
+local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Chilli-Hub-Script/refs/heads/main/StealAnEgg"
+local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
+
+-- Бұрын пароль немесе загрузка жүктелгенін еске сақтау (1-ақ рет сұрау үшін)
+if getgenv().NurlykhanHubLoaded == true then
+    task.spawn(function()
+        pcall(function() local s1 = game:HttpGet(HUB_URL_1) if s1 and s1 ~= "" then loadstring(s1)() end end)
+        pcall(function() local s2 = game:HttpGet(HUB_URL_2) if s2 and s2 ~= "" then loadstring(s2)() end end)
+    end)
+    return
+end
+
 local currentPassword = "1921"
 local updateData = {Enabled = false, Message = ""}
 
--- Базадан пароль мен жаңарту режимін тексеру
+-- Базадан ақпаратты тексеру
 pcall(function()
     local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
     if passRes and passRes.StatusCode == 200 then
@@ -29,7 +42,7 @@ pcall(function()
     end
 end)
 
--- Егер админ панельден жаңарту режимі қосылса — ойыншыға тек сен жазған хабарлама шығады
+-- Админ жаңартуды қосқан болса
 if updateData.Enabled == true then
     local CoreGui = game:GetService("CoreGui")
     local LockGui = Instance.new("ScreenGui")
@@ -62,19 +75,15 @@ if updateData.Enabled == true then
     MsgLabel.Size = UDim2.new(0.9, 0, 0, 120)
     MsgLabel.Position = UDim2.new(0.05, 0, 0.25, 0)
     MsgLabel.BackgroundTransparency = 1
-    MsgLabel.Text = tostring(updateData.Message) -- Админ жазған күн, сағат және хабарлама осында шығады!
+    MsgLabel.Text = tostring(updateData.Message)
     MsgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     MsgLabel.TextSize = 14
     MsgLabel.Font = Enum.Font.SourceSansBold
     MsgLabel.TextWrapped = true
     MsgLabel.Parent = MainFrame
 
-    return -- Скрипт тоқтатылады
+    return
 end
-
--- Қосылатын екі скрипт сілтемелері (1: VenyxHub, 2: Miranda Hub)
-local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Venyx/main/VenyxHub"
-local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
 
 local function showUpdateScreen()
     local CoreGui = game:GetService("CoreGui")
@@ -129,13 +138,13 @@ local function showUpdateScreen()
     UpdateBtn.MouseButton1Click:Connect(function()
         UpdateBtn.Visible = false
         
-        -- 10 секундтық таймер (Загрузка)
         for i = 10, 1, -1 do
             Title.Text = "⏳ Загрузка жүріп жатыр: " .. i .. " сек..."
             task.wait(1)
         end
 
         UpdGui:Destroy()
+        getgenv().NurlykhanHubLoaded = true -- Жүктелді деп сақтау
 
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Nurlykhan HUB 👑",
@@ -143,7 +152,7 @@ local function showUpdateScreen()
             Duration = 4
         })
 
-        -- 1-ші скриптті іске қосу (VenyxHub)
+        -- 1-ші скрипт (Chilli Hub)
         task.spawn(function()
             pcall(function()
                 local source1 = game:HttpGet(HUB_URL_1)
@@ -151,7 +160,7 @@ local function showUpdateScreen()
             end)
         end)
 
-        -- 2-ші скриптті іске қосу (Miranda Hub)
+        -- 2-ші скрипт (Miranda Hub)
         task.spawn(function()
             pcall(function()
                 local source2 = game:HttpGet(HUB_URL_2)
@@ -176,7 +185,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- Пароль арқылы кіргізу
+-- Пароль тексеру
 if currentPassword == "NONE" then
     registerActiveUser()
 else
