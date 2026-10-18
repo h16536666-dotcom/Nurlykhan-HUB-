@@ -9,16 +9,16 @@ local HttpService = game:GetService("HttpService")
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
--- Негізгі скрипт сілтемесі (Тек Chilli Hub)
-local HUB_URL = "https://raw.githubusercontent.com/tienkhanh1/Chilli-Hub-Script/refs/heads/main/StealAnEgg"
+-- Жаңа негізгі скрипт сілтемесі
+local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
--- Бұрын пароль немесе загрузка жүктелгенін еске сақтау (1-ақ рет сұрау үшін)
+-- Бұрын жүктелген болса, бірден қосу (1-ақ рет сұрау үшін)
 if getgenv().NurlykhanHubLoaded == true then
-    task.spawn(function()
-        pcall(function() 
-            local s = game:HttpGet(HUB_URL) 
-            if s and s ~= "" then loadstring(s)() end 
-        end)
+    pcall(function() 
+        local source = game:HttpGet(HUB_URL)
+        if source and source ~= "" then 
+            loadstring(source)() 
+        end
     end)
     return
 end
@@ -139,27 +139,39 @@ local function showUpdateScreen()
     UpdateBtn.MouseButton1Click:Connect(function()
         UpdateBtn.Visible = false
         
+        -- 10 секундтық таймер
         for i = 10, 1, -1 do
             Title.Text = "⏳ Загрузка жүріп жатыр: " .. i .. " сек..."
             task.wait(1)
         end
 
         UpdGui:Destroy()
-        getgenv().NurlykhanHubLoaded = true -- Жүктелді деп сақтау
+        getgenv().NurlykhanHubLoaded = true
 
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Nurlykhan HUB 👑",
-            Text = "Скрипт сәтті қосылды!",
-            Duration = 4
-        })
-
-        -- Тек Chilli Hub-ты іске қосу
-        task.spawn(function()
-            pcall(function()
-                local source = game:HttpGet(HUB_URL)
-                if source and source ~= "" then loadstring(source)() end
-            end)
+        -- Скриптті іске қосу
+        local success, err = pcall(function()
+            local source = game:HttpGet(HUB_URL)
+            if source and source ~= "" then 
+                loadstring(source)() 
+            else
+                error("Скрипт файлы бос болып келді!")
+            end
         end)
+
+        if success then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Nurlykhan HUB 👑",
+                Text = "Скрипт сәтті қосылды!",
+                Duration = 4
+            })
+        else
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "⚠️ ҚАТЕШІЛІК!",
+                Text = "Скрипт ашылмады. Интернетті тексеріңіз!",
+                Duration = 5
+            })
+            warn("Nurlykhan HUB Қателігі: " .. tostring(err))
+        end
     end)
 end
 
