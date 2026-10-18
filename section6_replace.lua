@@ -9,15 +9,16 @@ local HttpService = game:GetService("HttpService")
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
--- Скрипттер сілтемесі (Chilli Hub және Miranda Hub)
-local HUB_URL_1 = "https://raw.githubusercontent.com/tienkhanh1/Chilli-Hub-Script/refs/heads/main/StealAnEgg"
-local HUB_URL_2 = "https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealeggies"
+-- Негізгі скрипт сілтемесі (Тек Chilli Hub)
+local HUB_URL = "https://raw.githubusercontent.com/tienkhanh1/Chilli-Hub-Script/refs/heads/main/StealAnEgg"
 
 -- Бұрын пароль немесе загрузка жүктелгенін еске сақтау (1-ақ рет сұрау үшін)
 if getgenv().NurlykhanHubLoaded == true then
     task.spawn(function()
-        pcall(function() local s1 = game:HttpGet(HUB_URL_1) if s1 and s1 ~= "" then loadstring(s1)() end end)
-        pcall(function() local s2 = game:HttpGet(HUB_URL_2) if s2 and s2 ~= "" then loadstring(s2)() end end)
+        pcall(function() 
+            local s = game:HttpGet(HUB_URL) 
+            if s and s ~= "" then loadstring(s)() end 
+        end)
     end)
     return
 end
@@ -148,23 +149,15 @@ local function showUpdateScreen()
 
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Nurlykhan HUB 👑",
-            Text = "Барлық скриптер сәтті қосылды!",
+            Text = "Скрипт сәтті қосылды!",
             Duration = 4
         })
 
-        -- 1-ші скрипт (Chilli Hub)
+        -- Тек Chilli Hub-ты іске қосу
         task.spawn(function()
             pcall(function()
-                local source1 = game:HttpGet(HUB_URL_1)
-                if source1 and source1 ~= "" then loadstring(source1)() end
-            end)
-        end)
-
-        -- 2-ші скрипт (Miranda Hub)
-        task.spawn(function()
-            pcall(function()
-                local source2 = game:HttpGet(HUB_URL_2)
-                if source2 and source2 ~= "" then loadstring(source2)() end
+                local source = game:HttpGet(HUB_URL)
+                if source and source ~= "" then loadstring(source)() end
             end)
         end)
     end)
