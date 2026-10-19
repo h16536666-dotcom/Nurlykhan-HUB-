@@ -21,8 +21,16 @@ task.spawn(function()
             if res and res.StatusCode == 200 then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 1. Kick
+                    -- 1. KICK (ШЫҒАРУ) - БАЗАНЫ БІРДЕН ТАЗАЛАУ!
                     if uData.Kick == true then
+                        -- Алдымен базадағы Kick статусын өшіреміз (қайта кіргенде қайтадан шығарып жібермес үшін)
+                        request({
+                            Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kick.json",
+                            Method = "PUT",
+                            Headers = {["Content-Type"] = "application/json"},
+                            Body = HttpService:JSONEncode(false)
+                        })
+                        task.wait(0.2)
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
@@ -180,7 +188,6 @@ else
     pcall(function() ScreenGui.Parent = CoreGui end)
     if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
-    -- ТЕРЕЗЕ КЕҢЕЙТІЛДІ (3D Скин сыйу үшін)
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 420, 0, 220)
     MainFrame.Position = UDim2.new(0.5, -210, 0.5, -110)
@@ -205,14 +212,12 @@ else
     Title.Font = Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
-    -- 🌟 3D VIEWPORT (Ойыншының 3D Скині)
     local Viewport = Instance.new("ViewportFrame")
     Viewport.Size = UDim2.new(0, 140, 0, 160)
     Viewport.Position = UDim2.new(0.04, 0, 0.2, 0)
     Viewport.BackgroundTransparency = 1
     Viewport.Parent = MainFrame
 
-    -- Аватардың моделін жүктеу
     local worldModel = Instance.new("WorldModel")
     worldModel.Parent = Viewport
 
@@ -230,7 +235,6 @@ else
             if root then
                 camera.CFrame = CFrame.new(root.Position + Vector3.new(0, 0.5, 4.5), root.Position)
                 
-                -- 3D Скиннің айналу анимациясы (Loop)
                 local angle = 0
                 local spinConnection
                 spinConnection = RunService.RenderStepped:Connect(function(dt)
@@ -245,7 +249,6 @@ else
         end)
     end)
 
-    -- Пароль енгізу өрістері (Оң жағында орналасады)
     local PassBox = Instance.new("TextBox")
     PassBox.Size = UDim2.new(0.5, 0, 0, 38)
     PassBox.Position = UDim2.new(0.44, 0, 0.3, 0)
