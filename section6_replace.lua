@@ -7,10 +7,15 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-------------------------------------------------------------------
+-- 👑 НҰРЛЫХАННЫҢ ROBLOX USER ID-І
+local MY_ROBLOX_USER_ID = 7103646402 
+-------------------------------------------------------------------
 
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
-
 local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
 -- АДМИН КОМАНДАЛАРЫН ТЕКСЕРУ ЦИКЛІ
@@ -18,19 +23,18 @@ task.spawn(function()
     while task.wait(1.5) do
         pcall(function()
             local res = request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json", Method = "GET" })
-            if res and res.StatusCode == 200 then
+            if res and res.StatusCode == 200 and res.Body ~= "null" then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 1. KICK (ШЫҒАРУ) - БАЗАНЫ БІРДЕН ТАЗАЛАУ!
+                    -- 1. Kick
                     if uData.Kick == true then
-                        -- Алдымен базадағы Kick статусын өшіреміз (қайта кіргенде қайтадан шығарып жібермес үшін)
                         request({
                             Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kick.json",
                             Method = "PUT",
                             Headers = {["Content-Type"] = "application/json"},
                             Body = HttpService:JSONEncode(false)
                         })
-                        task.wait(0.2)
+                        task.wait(0.3)
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
@@ -76,7 +80,7 @@ local updateData = {Enabled = false, Message = ""}
 
 pcall(function()
     local passRes = request({ Url = SETTINGS_URL .. "/PasswordData.json", Method = "GET" })
-    if passRes and passRes.StatusCode == 200 then
+    if passRes and passRes.StatusCode == 200 and passRes.Body ~= "null" then
         local pData = HttpService:JSONDecode(passRes.Body)
         if type(pData) == "table" and pData.Password then
             if pData.ExpireTime == 0 or os.time() < pData.ExpireTime then
@@ -88,7 +92,7 @@ pcall(function()
     end
 
     local updateRes = request({ Url = SETTINGS_URL .. "/UpdateData.json", Method = "GET" })
-    if updateRes and updateRes.StatusCode == 200 then
+    if updateRes and updateRes.StatusCode == 200 and updateRes.Body ~= "null" then
         local uData = HttpService:JSONDecode(updateRes.Body)
         if type(uData) == "table" then updateData = uData end
     end
@@ -176,7 +180,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- ПАРОЛЬ ТЕРЕЗЕСІ + 3D АВАТАР (СКИН)
+-- ПАРОЛЬ ТЕРЕЗЕСІ + НҰРЛЫХАННЫҢ АЙНАЛАТЫН 3D СКИНІ
 if currentPassword == "NONE" then
     registerActiveUser()
 else
@@ -189,12 +193,13 @@ else
     if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 420, 0, 220)
-    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -110)
+    MainFrame.Size = UDim2.new(0, 420, 0, 230)
+    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -115)
     MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
+    MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
@@ -212,9 +217,10 @@ else
     Title.Font = Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
+    -- 🌟 3D VIEWPORT (Нұрлыханның 3D Скині)
     local Viewport = Instance.new("ViewportFrame")
-    Viewport.Size = UDim2.new(0, 140, 0, 160)
-    Viewport.Position = UDim2.new(0.04, 0, 0.2, 0)
+    Viewport.Size = UDim2.new(0.38, 0, 0.75, 0)
+    Viewport.Position = UDim2.new(0.03, 0, 0.18, 0)
     Viewport.BackgroundTransparency = 1
     Viewport.Parent = MainFrame
 
@@ -227,30 +233,54 @@ else
 
     task.spawn(function()
         pcall(function()
-            local dummy = Players:CreateHumanoidModelFromUserId(LocalPlayer.UserId)
+            -- Нұрлыханның (7103646402) Скинін жүктеу
+            local dummy = Players:CreateHumanoidModelFromUserId(MY_ROBLOX_USER_ID)
             dummy.Parent = worldModel
-            dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
 
-            local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Head")
+            local head = dummy:FindFirstChild("Head")
+            local root = dummy:FindFirstChild("HumanoidRootPart") or head
+
+            -- Скин төбесіне "Xakep_2035 👑" жазуы
+            if head then
+                local bbg = Instance.new("BillboardGui")
+                bbg.Size = UDim2.new(0, 150, 0, 40)
+                bbg.StudsOffset = Vector3.new(0, 2.2, 0)
+                bbg.AlwaysOnTop = true
+                bbg.Parent = head
+
+                local txt = Instance.new("TextLabel")
+                txt.Size = UDim2.new(1, 0, 1, 0)
+                txt.BackgroundTransparency = 1
+                txt.Text = "Xakep_2035 👑"
+                txt.TextColor3 = Color3.fromRGB(0, 255, 65)
+                txt.TextSize = 16
+                txt.Font = Enum.Font.SourceSansBold
+                txt.TextStrokeTransparency = 0
+                txt.Parent = bbg
+            end
+
             if root then
-                camera.CFrame = CFrame.new(root.Position + Vector3.new(0, 0.5, 4.5), root.Position)
+                dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
+                camera.CFrame = CFrame.new(Vector3.new(0, 0.8, 5.5), Vector3.new(0, 0, 0))
                 
+                -- Скиннің үздіксіз айналуы
                 local angle = 0
                 local spinConnection
                 spinConnection = RunService.RenderStepped:Connect(function(dt)
-                    if not MainFrame or not MainFrame.Parent then 
+                    if not ScreenGui or not ScreenGui.Parent or not MainFrame or not MainFrame.Parent then 
                         spinConnection:Disconnect() 
                         return 
                     end
-                    angle = angle + dt * 1.5
-                    dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, angle, 0))
+                    angle = angle + (dt * 2)
+                    dummy:SetPrimaryPartCFrame(CFrame.new(0, -0.5, 0) * CFrame.Angles(0, angle, 0))
                 end)
             end
         end)
     end)
 
+    -- Пароль енгізу өрісі
     local PassBox = Instance.new("TextBox")
-    PassBox.Size = UDim2.new(0.5, 0, 0, 38)
+    PassBox.Size = UDim2.new(0.52, 0, 0, 38)
     PassBox.Position = UDim2.new(0.44, 0, 0.3, 0)
     PassBox.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
     PassBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -262,7 +292,7 @@ else
     Instance.new("UICorner", PassBox).CornerRadius = UDim.new(0, 8)
 
     local SubmitBtn = Instance.new("TextButton")
-    SubmitBtn.Size = UDim2.new(0.5, 0, 0, 38)
+    SubmitBtn.Size = UDim2.new(0.52, 0, 0, 38)
     SubmitBtn.Position = UDim2.new(0.44, 0, 0.58, 0)
     SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -271,6 +301,44 @@ else
     SubmitBtn.Font = Enum.Font.SourceSansBold
     SubmitBtn.Parent = MainFrame
     Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
+
+    -- 📐 Терезені созып үлкейту түймесі (Resize)
+    local ResizeBtn = Instance.new("TextButton")
+    ResizeBtn.Size = UDim2.new(0, 18, 0, 18)
+    ResizeBtn.Position = UDim2.new(1, -18, 1, -18)
+    ResizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    ResizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ResizeBtn.Text = "↘"
+    ResizeBtn.TextSize = 12
+    ResizeBtn.Font = Enum.Font.SourceSansBold
+    ResizeBtn.Parent = MainFrame
+    Instance.new("UICorner", ResizeBtn).CornerRadius = UDim.new(0, 4)
+
+    local isResizing = false
+    local startInput, startSize
+
+    ResizeBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isResizing = true
+            startInput = input.Position
+            startSize = MainFrame.Size
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startInput
+            local newX = math.max(320, startSize.X.Offset + delta.X)
+            local newY = math.max(180, startSize.Y.Offset + delta.Y)
+            MainFrame.Size = UDim2.new(0, newX, 0, newY)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isResizing = false
+        end
+    end)
 
     SubmitBtn.MouseButton1Click:Connect(function()
         if PassBox.Text == currentPassword then
