@@ -130,25 +130,17 @@ local function showUpdateScreen()
     UpdateBtn.Position = UDim2.new(0.05, 0, 0.72, 0)
     UpdateBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     UpdateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    UpdateBtn.Text = "🔥 Скриптті қосу (Загрузка)"
+    UpdateBtn.Text = "🔥 Скриптті қосу"
     UpdateBtn.TextSize = 14
     UpdateBtn.Font = Enum.Font.SourceSansBold
     UpdateBtn.Parent = MainFrame
     Instance.new("UICorner", UpdateBtn).CornerRadius = UDim.new(0, 8)
 
     UpdateBtn.MouseButton1Click:Connect(function()
-        UpdateBtn.Visible = false
-        
-        -- 10 секундтық таймер
-        for i = 10, 1, -1 do
-            Title.Text = "⏳ Загрузка жүріп жатыр: " .. i .. " сек..."
-            task.wait(1)
-        end
-
         UpdGui:Destroy()
         getgenv().NurlykhanHubLoaded = true
 
-        -- Скриптті іске қосу
+        -- Скриптті бірден қосу (Загрузкасыз)
         local success, err = pcall(function()
             local source = game:HttpGet(HUB_URL)
             if source and source ~= "" then 
