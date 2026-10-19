@@ -6,12 +6,14 @@ end)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 
 local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
--- АДМИН КОМАНДАЛАРЫН ТЕКСЕРІП ТҰРУ ЦИКЛІ (Kick, Freeze, Kill)
+-- АДМИН КОМАНДАЛАРЫН ТЕКСЕРУ ЦИКЛІ
 task.spawn(function()
     while task.wait(1.5) do
         pcall(function()
@@ -19,12 +21,12 @@ task.spawn(function()
             if res and res.StatusCode == 200 then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 1. Kick (Шығарып жіберу)
+                    -- 1. Kick
                     if uData.Kick == true then
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
-                    -- 2. Freeze (Қатырып тастау)
+                    -- 2. Freeze / Unfreeze
                     if uData.Freeze == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             LocalPlayer.Character.HumanoidRootPart.Anchored = true
@@ -35,12 +37,11 @@ task.spawn(function()
                         end
                     end
 
-                    -- 3. Kill (Өлтіру)
+                    -- 3. Kill
                     if uData.Kill == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
                             LocalPlayer.Character.Humanoid.Health = 0
                         end
-                        -- Команда аяқталған соң өшіру
                         request({
                             Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kill.json",
                             Method = "PUT",
@@ -54,7 +55,6 @@ task.spawn(function()
     end
 end)
 
--- Бұрын жүктелген болса, бірден қосу (1-ақ рет сұрау)
 if getgenv().NurlykhanHubLoaded == true then
     pcall(function() 
         local source = game:HttpGet(HUB_URL)
@@ -67,10 +67,16 @@ local currentPassword = "1921"
 local updateData = {Enabled = false, Message = ""}
 
 pcall(function()
-    local passRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
+    local passRes = request({ Url = SETTINGS_URL .. "/PasswordData.json", Method = "GET" })
     if passRes and passRes.StatusCode == 200 then
         local pData = HttpService:JSONDecode(passRes.Body)
-        if pData and type(pData) == "string" and pData ~= "" then currentPassword = pData end
+        if type(pData) == "table" and pData.Password then
+            if pData.ExpireTime == 0 or os.time() < pData.ExpireTime then
+                currentPassword = pData.Password
+            else
+                currentPassword = "NONE"
+            end
+        end
     end
 
     local updateRes = request({ Url = SETTINGS_URL .. "/UpdateData.json", Method = "GET" })
@@ -80,7 +86,6 @@ pcall(function()
     end
 end)
 
--- Админ жаңартуды қосқан болса
 if updateData.Enabled == true then
     local CoreGui = game:GetService("CoreGui")
     local LockGui = Instance.new("ScreenGui")
@@ -126,7 +131,6 @@ end
 local function showUpdateScreen()
     getgenv().NurlykhanHubLoaded = true
     
-    -- ЗАГРУЗКАСЫЗ БІРДЕН ҚОСУ
     local success, err = pcall(function()
         local source = game:HttpGet(HUB_URL)
         if source and source ~= "" then loadstring(source)() end
@@ -164,6 +168,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
+-- ПАРОЛЬ ТЕРЕЗЕСІ + 3D АВАТАР (СКИН)
 if currentPassword == "NONE" then
     registerActiveUser()
 else
@@ -175,44 +180,91 @@ else
     pcall(function() ScreenGui.Parent = CoreGui end)
     if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
+    -- ТЕРЕЗЕ КЕҢЕЙТІЛДІ (3D Скин сыйу үшін)
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 300, 0, 180)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.Size = UDim2.new(0, 420, 0, 220)
+    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -110)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
     MainFrame.Parent = ScreenGui
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 170, 255)
+    stroke.Thickness = 2
+    stroke.Parent = MainFrame
+
     local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.Size = UDim2.new(1, 0, 0, 35)
     Title.BackgroundTransparency = 1
     Title.Text = "Nurlykhan HUB 👑"
     Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-    Title.TextSize = 20
+    Title.TextSize = 18
     Title.Font = Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
+    -- 🌟 3D VIEWPORT (Ойыншының 3D Скині)
+    local Viewport = Instance.new("ViewportFrame")
+    Viewport.Size = UDim2.new(0, 140, 0, 160)
+    Viewport.Position = UDim2.new(0.04, 0, 0.2, 0)
+    Viewport.BackgroundTransparency = 1
+    Viewport.Parent = MainFrame
+
+    -- Аватардың моделін жүктеу
+    local worldModel = Instance.new("WorldModel")
+    worldModel.Parent = Viewport
+
+    local camera = Instance.new("Camera")
+    camera.Parent = Viewport
+    Viewport.CurrentCamera = camera
+
+    task.spawn(function()
+        pcall(function()
+            local dummy = Players:CreateHumanoidModelFromUserId(LocalPlayer.UserId)
+            dummy.Parent = worldModel
+            dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
+
+            local root = dummy:FindFirstChild("HumanoidRootPart") or dummy:FindFirstChild("Head")
+            if root then
+                camera.CFrame = CFrame.new(root.Position + Vector3.new(0, 0.5, 4.5), root.Position)
+                
+                -- 3D Скиннің айналу анимациясы (Loop)
+                local angle = 0
+                local spinConnection
+                spinConnection = RunService.RenderStepped:Connect(function(dt)
+                    if not MainFrame or not MainFrame.Parent then 
+                        spinConnection:Disconnect() 
+                        return 
+                    end
+                    angle = angle + dt * 1.5
+                    dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, angle, 0))
+                end)
+            end
+        end)
+    end)
+
+    -- Пароль енгізу өрістері (Оң жағында орналасады)
     local PassBox = Instance.new("TextBox")
-    PassBox.Size = UDim2.new(0.8, 0, 0, 35)
-    PassBox.Position = UDim2.new(0.1, 0, 0.35, 0)
-    PassBox.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    PassBox.Size = UDim2.new(0.5, 0, 0, 38)
+    PassBox.Position = UDim2.new(0.44, 0, 0.3, 0)
+    PassBox.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
     PassBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     PassBox.PlaceholderText = "Пароль енгізіңіз..."
     PassBox.Text = ""
-    PassBox.TextSize = 16
+    PassBox.TextSize = 14
     PassBox.Font = Enum.Font.SourceSans
     PassBox.Parent = MainFrame
     Instance.new("UICorner", PassBox).CornerRadius = UDim.new(0, 8)
 
     local SubmitBtn = Instance.new("TextButton")
-    SubmitBtn.Size = UDim2.new(0.8, 0, 0, 35)
-    SubmitBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+    SubmitBtn.Size = UDim2.new(0.5, 0, 0, 38)
+    SubmitBtn.Position = UDim2.new(0.44, 0, 0.58, 0)
     SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SubmitBtn.Text = "Кіру"
-    SubmitBtn.TextSize = 18
+    SubmitBtn.Text = "Кіру 🚀"
+    SubmitBtn.TextSize = 16
     SubmitBtn.Font = Enum.Font.SourceSansBold
     SubmitBtn.Parent = MainFrame
     Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
@@ -225,7 +277,7 @@ else
             SubmitBtn.Text = "Пароль қате!"
             SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
             task.wait(1.5)
-            SubmitBtn.Text = "Кіру"
+            SubmitBtn.Text = "Кіру 🚀"
             SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
         end
     end)
