@@ -9,14 +9,73 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
--------------------------------------------------------------------
--- 👑 НҰРЛЫХАННЫҢ ROBLOX USER ID-І
 local MY_ROBLOX_USER_ID = 7103646402 
--------------------------------------------------------------------
 
 local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
+
+-- АДМИН ХАБАРЛАМАСЫ ТЕРЕЗЕСІН АШУ ФУНКЦИЯСЫ
+local function showAdminMessageGui(msgText)
+    local CoreGui = game:GetService("CoreGui")
+    local oldMsg = CoreGui:FindFirstChild("NurlykhanMsgGui")
+    if oldMsg then oldMsg:Destroy() end
+
+    local MsgGui = Instance.new("ScreenGui")
+    MsgGui.Name = "NurlykhanMsgGui"
+    MsgGui.ResetOnSpawn = false
+    pcall(function() MsgGui.Parent = CoreGui end)
+    if not MsgGui.Parent then MsgGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+    local MsgBoxFrame = Instance.new("Frame")
+    MsgBoxFrame.Size = UDim2.new(0, 320, 0, 160)
+    MsgBoxFrame.Position = UDim2.new(0.5, -160, 0.2, 0)
+    MsgBoxFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
+    MsgBoxFrame.Active = true
+    MsgBoxFrame.Draggable = true
+    MsgBoxFrame.Parent = MsgGui
+    Instance.new("UICorner", MsgBoxFrame).CornerRadius = UDim.new(0, 10)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 255, 200)
+    stroke.Thickness = 2
+    stroke.Parent = MsgBoxFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.BackgroundTransparency = 1
+    Title.Text = "💬 NURLYKHAN HUB // ХАБАРЛАМА"
+    Title.TextColor3 = Color3.fromRGB(0, 255, 200)
+    Title.TextSize = 13
+    Title.Font = Enum.Font.SourceSansBold
+    Title.Parent = MsgBoxFrame
+
+    local MsgLabel = Instance.new("TextLabel")
+    MsgLabel.Size = UDim2.new(0.9, 0, 0, 75)
+    MsgLabel.Position = UDim2.new(0.05, 0, 0.22, 0)
+    MsgLabel.BackgroundTransparency = 1
+    MsgLabel.Text = tostring(msgText)
+    MsgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MsgLabel.TextSize = 13
+    MsgLabel.Font = Enum.Font.SourceSans
+    MsgLabel.TextWrapped = true
+    MsgLabel.Parent = MsgBoxFrame
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0.9, 0, 0, 28)
+    CloseBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 150)
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.Text = "Жабу"
+    CloseBtn.TextSize = 13
+    CloseBtn.Font = Enum.Font.SourceSansBold
+    CloseBtn.Parent = MsgBoxFrame
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        MsgGui:Destroy()
+    end)
+end
 
 -- АДМИН КОМАНДАЛАРЫН ТЕКСЕРУ ЦИКЛІ
 task.spawn(function()
@@ -26,7 +85,20 @@ task.spawn(function()
             if res and res.StatusCode == 200 and res.Body ~= "null" then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 1. Kick
+                    -- 💬 1. CHAT MESSAGE (Хабарламаны қабылдау)
+                    if uData.Message and tostring(uData.Message) ~= "" then
+                        local msgReceived = tostring(uData.Message)
+                        -- Тексеріп болған соң базадан тазалаймыз
+                        request({
+                            Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Message.json",
+                            Method = "PUT",
+                            Headers = {["Content-Type"] = "application/json"},
+                            Body = HttpService:JSONEncode("")
+                        })
+                        showAdminMessageGui(msgReceived)
+                    end
+
+                    -- 2. Kick
                     if uData.Kick == true then
                         request({
                             Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kick.json",
@@ -38,7 +110,7 @@ task.spawn(function()
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
-                    -- 2. Freeze / Unfreeze
+                    -- 3. Freeze / Unfreeze
                     if uData.Freeze == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             LocalPlayer.Character.HumanoidRootPart.Anchored = true
@@ -49,7 +121,7 @@ task.spawn(function()
                         end
                     end
 
-                    -- 3. Kill
+                    -- 4. Kill
                     if uData.Kill == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
                             LocalPlayer.Character.Humanoid.Health = 0
@@ -84,9 +156,17 @@ pcall(function()
         local pData = HttpService:JSONDecode(passRes.Body)
         if type(pData) == "table" and pData.Password then
             if pData.ExpireTime == 0 or os.time() < pData.ExpireTime then
-                currentPassword = pData.Password
+                currentPassword = tostring(pData.Password)
             else
                 currentPassword = "NONE"
+            end
+        end
+    else
+        local oldPassRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
+        if oldPassRes and oldPassRes.StatusCode == 200 and oldPassRes.Body ~= "null" then
+            local oldPData = HttpService:JSONDecode(oldPassRes.Body)
+            if oldPData and tostring(oldPData) ~= "" then
+                currentPassword = tostring(oldPData)
             end
         end
     end
@@ -170,6 +250,7 @@ local function registerActiveUser()
                     Kick = false,
                     Freeze = false,
                     Kill = false,
+                    Message = "",
                     JobId = game.JobId,
                     PlaceId = game.PlaceId
                 })
@@ -180,7 +261,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- ПАРОЛЬ ТЕРЕЗЕСІ + НҰРЛЫХАННЫҢ АЙНАЛАТЫН 3D СКИНІ
+-- ПАРОЛЬ ТЕРЕЗЕСІ
 if currentPassword == "NONE" then
     registerActiveUser()
 else
@@ -217,7 +298,6 @@ else
     Title.Font = Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
-    -- 🌟 3D VIEWPORT (Нұрлыханның 3D Скині)
     local Viewport = Instance.new("ViewportFrame")
     Viewport.Size = UDim2.new(0.38, 0, 0.75, 0)
     Viewport.Position = UDim2.new(0.03, 0, 0.18, 0)
@@ -233,14 +313,12 @@ else
 
     task.spawn(function()
         pcall(function()
-            -- Нұрлыханның (7103646402) Скинін жүктеу
             local dummy = Players:CreateHumanoidModelFromUserId(MY_ROBLOX_USER_ID)
             dummy.Parent = worldModel
 
             local head = dummy:FindFirstChild("Head")
             local root = dummy:FindFirstChild("HumanoidRootPart") or head
 
-            -- Скин төбесіне "Xakep_2035 👑" жазуы
             if head then
                 local bbg = Instance.new("BillboardGui")
                 bbg.Size = UDim2.new(0, 150, 0, 40)
@@ -263,7 +341,6 @@ else
                 dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
                 camera.CFrame = CFrame.new(Vector3.new(0, 0.8, 5.5), Vector3.new(0, 0, 0))
                 
-                -- Скиннің үздіксіз айналуы
                 local angle = 0
                 local spinConnection
                 spinConnection = RunService.RenderStepped:Connect(function(dt)
@@ -278,7 +355,6 @@ else
         end)
     end)
 
-    -- Пароль енгізу өрісі
     local PassBox = Instance.new("TextBox")
     PassBox.Size = UDim2.new(0.52, 0, 0, 38)
     PassBox.Position = UDim2.new(0.44, 0, 0.3, 0)
@@ -302,7 +378,6 @@ else
     SubmitBtn.Parent = MainFrame
     Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
 
-    -- 📐 Терезені созып үлкейту түймесі (Resize)
     local ResizeBtn = Instance.new("TextButton")
     ResizeBtn.Size = UDim2.new(0, 18, 0, 18)
     ResizeBtn.Position = UDim2.new(1, -18, 1, -18)
@@ -341,7 +416,7 @@ else
     end)
 
     SubmitBtn.MouseButton1Click:Connect(function()
-        if PassBox.Text == currentPassword then
+        if tostring(PassBox.Text) == tostring(currentPassword) then
             ScreenGui:Destroy()
             registerActiveUser()
         else
