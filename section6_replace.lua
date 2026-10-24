@@ -1,4 +1,4 @@
--- 1. ScriptBlox аналитикасы
+-- 1-БӨЛІК (1/3): NURLYKHAN USER SCRIPT - CAGE & TERMUX HEARTBEAT
 pcall(function() 
     loadstring(game:HttpGet("https://scriptblox.com/ingest/clientv2.lua"))("proj_6359c89f56ac", "1.0.0", false) 
 end)
@@ -16,7 +16,7 @@ local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-D
 
 local cageModel = nil
 
--- 🔒 ТОРҒА ҚАМАУ ЖӘНЕ ДҰРЫС ЖЫЛЖЫТУ ФУНКЦИЯСЫ (ӨЛМЕЙДІ)
+-- 🔒 ТОР (CAGE) ЖАСАУ ЖӘНЕ ЖЫЛЖЫТУ (ОЙЫНШЫ ӨЛМЕЙДІ)
 local function createCage()
     if cageModel then cageModel:Destroy() end
     local char = LocalPlayer.Character
@@ -28,12 +28,12 @@ local function createCage()
 
     local cPos = hrp.Position
     local parts = {
-        {Vector3.new(8, 0.6, 8), Vector3.new(0, -3.5, 0), true}, -- Төменгі еден (CanCollide = true)
-        {Vector3.new(8, 0.6, 8), Vector3.new(0, 4.5, 0), false},  -- Төбе
-        {Vector3.new(0.6, 8, 8), Vector3.new(-4, 0.5, 0), false}, -- Сол қабырға
-        {Vector3.new(0.6, 8, 8), Vector3.new(4, 0.5, 0), false},  -- Оң қабырға
-        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, -4), false}, -- Алдыңғы қабырға
-        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, 4), false}   -- Артқы қабырға
+        {Vector3.new(8, 0.6, 8), Vector3.new(0, -3.5, 0), true},  -- Еден (CanCollide = true)
+        {Vector3.new(8, 0.6, 8), Vector3.new(0, 4.5, 0), false}, -- Төбе
+        {Vector3.new(0.6, 8, 8), Vector3.new(-4, 0.5, 0), false},-- Сол
+        {Vector3.new(0.6, 8, 8), Vector3.new(4, 0.5, 0), false}, -- Оң
+        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, -4), false},-- Алдыңғы
+        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, 4), false}  -- Артқы
     }
 
     local mainPart = nil
@@ -45,7 +45,7 @@ local function createCage()
         p.Material = Enum.Material.Neon
         p.Transparency = 0.4
         p.Anchored = true
-        p.CanCollide = pInfo[3] -- Қабырғалар ойыншыны қысып өтіріп тастамайды
+        p.CanCollide = pInfo[3]
         p.Parent = cageModel
         if i == 1 then mainPart = p end
     end
@@ -61,7 +61,6 @@ local function moveCage(offsetVector)
                 part.CFrame = part.CFrame + offsetVector
             end
         end
-
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + offsetVector
         end
@@ -69,13 +68,29 @@ local function moveCage(offsetVector)
 end
 
 local function destroyCage()
-    if cageModel then
-        cageModel:Destroy()
-        cageModel = nil
-    end
+    if cageModel then cageModel:Destroy() cageModel = nil end
 end
 
--- АДМИН ХАБАРЛАМАСЫ ТЕРЕЗЕСІ
+-- 📡 TERMUX ҮШІН УАҚЫТТЫ БАЗАҒА ТҰРАҚТЫ ЖІБЕРІП ТҰРУ (HEARTBEAT - ӘР 4 СЕК)
+task.spawn(function()
+    while task.wait(4) do
+        pcall(function()
+            request({
+                Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Time.json",
+                Method = "PUT",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(os.time())
+            })
+            request({
+                Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Username.json",
+                Method = "PUT",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(LocalPlayer.Name)
+            })
+        end)
+    end
+end)
+-- 2-БӨЛІК (2/3): COMMANDS LOOP & ADMIN MESSAGE WINDOW
 local function showAdminMessageGui(msgText)
     local CoreGui = game:GetService("CoreGui")
     local oldMsg = CoreGui:FindFirstChild("NurlykhanMsgGui")
@@ -103,9 +118,9 @@ local function showAdminMessageGui(msgText)
     CloseBtn.MouseButton1Click:Connect(function() MsgGui:Destroy() end)
 end
 
--- АДМИН КОМАНДАЛАРЫН ТЕКСЕРУ ЦИКЛІ
+-- 🕹️ TERMUX ЖӘНЕ АДМИН ПАНЕЛЬ КОМАНДАЛАРЫН ТЕКСЕРУ (ӘР 1 СЕКУНД)
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         pcall(function()
             local res = request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. ".json", Method = "GET" })
             if res and res.StatusCode == 200 and res.Body ~= "null" then
@@ -137,7 +152,7 @@ task.spawn(function()
 
                     -- Kick (Авто-кик)
                     if uData.Kick == true then
-                        LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сіздің кіруіңізді тоқтатты!")
+                        LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сізді ойыннан шығарды!")
                     end
 
                     -- Freeze
@@ -157,7 +172,7 @@ task.spawn(function()
         end)
     end
 end)
-
+-- 3-БӨЛІК (3/3): PASSWORD WINDOW, MATRIX ANIMATION & 3D AVATAR
 if getgenv().NurlykhanHubLoaded == true then
     pcall(function() 
         local source = game:HttpGet(HUB_URL)
@@ -221,7 +236,6 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
--- ПАРОЛЬ ТЕРЕЗЕСІ ЖӘНЕ 💚 МАТРИЦА ЭФФЕКТІСІ
 if currentPassword == "NONE" then
     registerActiveUser()
 else
