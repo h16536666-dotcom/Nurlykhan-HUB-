@@ -1,4 +1,4 @@
--- 1-БӨЛІК: NURLYKHAN USER SCRIPT (TOR & CONTROL SYSTEM)
+-- 1. ScriptBlox аналитикасы
 pcall(function() 
     loadstring(game:HttpGet("https://scriptblox.com/ingest/clientv2.lua"))("proj_6359c89f56ac", "1.0.0", false) 
 end)
@@ -16,7 +16,7 @@ local HUB_URL = "https://raw.githubusercontent.com/h16536666-dotcom/Egg-Roblox-D
 
 local cageModel = nil
 
--- 🔒 ТОР (CAGE) ЖАСАУ ЖӘНЕ ҚОЗҒАЛТУ ФУНКЦИЯСЫ
+-- 🔒 ТОРҒА ҚАМАУ ЖӘНЕ ДҰРЫС ЖЫЛЖЫТУ ФУНКЦИЯСЫ (ӨЛМЕЙДІ)
 local function createCage()
     if cageModel then cageModel:Destroy() end
     local char = LocalPlayer.Character
@@ -24,16 +24,16 @@ local function createCage()
 
     local hrp = char.HumanoidRootPart
     cageModel = Instance.new("Model")
-    cageModel.Name = "NurlykhanAdminCage"
+    cageModel.Name = "NurlykhanSafeCage"
 
     local cPos = hrp.Position
     local parts = {
-        {Vector3.new(6, 0.5, 6), Vector3.new(0, -3, 0)}, -- Төменгі еден
-        {Vector3.new(6, 0.5, 6), Vector3.new(0, 3, 0)},  -- Жоғарғы төбе
-        {Vector3.new(0.5, 6, 6), Vector3.new(-3, 0, 0)}, -- Сол жақ қабырға
-        {Vector3.new(0.5, 6, 6), Vector3.new(3, 0, 0)},  -- Оң жақ қабырға
-        {Vector3.new(6, 6, 0.5), Vector3.new(0, 0, -3)}, -- Алдыңғы қабырға
-        {Vector3.new(6, 6, 0.5), Vector3.new(0, 0, 3)}   -- Артқы қабырға
+        {Vector3.new(8, 0.6, 8), Vector3.new(0, -3.5, 0), true}, -- Төменгі еден (CanCollide = true)
+        {Vector3.new(8, 0.6, 8), Vector3.new(0, 4.5, 0), false},  -- Төбе
+        {Vector3.new(0.6, 8, 8), Vector3.new(-4, 0.5, 0), false}, -- Сол қабырға
+        {Vector3.new(0.6, 8, 8), Vector3.new(4, 0.5, 0), false},  -- Оң қабырға
+        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, -4), false}, -- Алдыңғы қабырға
+        {Vector3.new(8, 8, 0.6), Vector3.new(0, 0.5, 4), false}   -- Артқы қабырға
     }
 
     local mainPart = nil
@@ -45,7 +45,7 @@ local function createCage()
         p.Material = Enum.Material.Neon
         p.Transparency = 0.4
         p.Anchored = true
-        p.CanCollide = true
+        p.CanCollide = pInfo[3] -- Қабырғалар ойыншыны қысып өтіріп тастамайды
         p.Parent = cageModel
         if i == 1 then mainPart = p end
     end
@@ -56,17 +56,12 @@ end
 
 local function moveCage(offsetVector)
     if cageModel and cageModel.PrimaryPart then
-        local currentCF = cageModel.PrimaryPart.CFrame
-        local newCF = currentCF + offsetVector
-        
-        -- Торды жаңа орынға жылжыту
         for _, part in ipairs(cageModel:GetChildren()) do
             if part:IsA("BasePart") then
                 part.CFrame = part.CFrame + offsetVector
             end
         end
 
-        -- Ойыншыны тордың ішінде бірге жылжыту
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + offsetVector
         end
@@ -116,7 +111,7 @@ task.spawn(function()
             if res and res.StatusCode == 200 and res.Body ~= "null" then
                 local uData = HttpService:JSONDecode(res.Body)
                 if type(uData) == "table" then
-                    -- 🔒 Тор командалары
+                    -- Тор командалары
                     if uData.CageState == "Create" then
                         request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/CageState.json", Method = "PUT", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode("") })
                         createCage()
@@ -126,14 +121,14 @@ task.spawn(function()
                     elseif uData.CageMove and uData.CageMove ~= "" then
                         local dir = uData.CageMove
                         request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/CageMove.json", Method = "PUT", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode("") })
-                        if dir == "Up" then moveCage(Vector3.new(0, 3, 0))
-                        elseif dir == "Down" then moveCage(Vector3.new(0, -3, 0))
-                        elseif dir == "Left" then moveCage(Vector3.new(-3, 0, 0))
-                        elseif dir == "Right" then moveCage(Vector3.new(3, 0, 0))
+                        if dir == "Up" then moveCage(Vector3.new(0, 4, 0))
+                        elseif dir == "Down" then moveCage(Vector3.new(0, -4, 0))
+                        elseif dir == "Left" then moveCage(Vector3.new(-4, 0, 0))
+                        elseif dir == "Right" then moveCage(Vector3.new(4, 0, 0))
                         end
                     end
 
-                    -- Чат хабарламасы
+                    -- Чат
                     if uData.Message and tostring(uData.Message) ~= "" then
                         local msgReceived = tostring(uData.Message)
                         request({ Url = DATABASE_URL .. "/" .. LocalPlayer.UserId .. "/Message.json", Method = "PUT", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode("") })
@@ -145,7 +140,7 @@ task.spawn(function()
                         LocalPlayer:Kick("Nurlykhan HUB 👑: Админ сіздің кіруіңізді тоқтатты!")
                     end
 
-                    -- Freeze / Unfreeze
+                    -- Freeze
                     if uData.Freeze == true then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then LocalPlayer.Character.HumanoidRootPart.Anchored = true end
                     elseif uData.Freeze == false then
@@ -162,7 +157,7 @@ task.spawn(function()
         end)
     end
 end)
--- 2-БӨЛІК: ПАРОЛЬ ТЕРЕЗЕСІ, МАТРИЦА ФОНЫ ЖӘНЕ 3D АВАТАР
+
 if getgenv().NurlykhanHubLoaded == true then
     pcall(function() 
         local source = game:HttpGet(HUB_URL)
@@ -226,6 +221,7 @@ local function registerActiveUser()
     showUpdateScreen()
 end
 
+-- ПАРОЛЬ ТЕРЕЗЕСІ ЖӘНЕ 💚 МАТРИЦА ЭФФЕКТІСІ
 if currentPassword == "NONE" then
     registerActiveUser()
 else
