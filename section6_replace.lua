@@ -1,11 +1,12 @@
 -- =====================================================================
--- NURLYKHAN CYBERPUNK USER SCRIPT // PART 1 OF 3
+-- NURLYKHAN FIREBASE STRICT KEY GATE // PART 1 OF 3
 -- =====================================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local MY_ROBLOX_USER_ID = 7103646402
@@ -160,8 +161,44 @@ local function showAdminMessageGui(msgText)
     end)
     CloseBtn.MouseButton1Click:Connect(function() MsgGui:Destroy() end)
 end
+
+-- Тек Firebase базасындағы /Settings/PasswordData.json ішіндегі кілтті тексереді
+local function validateFirebaseOnlyKey(enteredKey)
+    if not enteredKey or tostring(enteredKey) == "" then
+        return false, "КІЛТ ЕНГІЗІЛМЕДІ"
+    end
+
+    local ok, isValid, reason = pcall(function()
+        local res = request({ Url = SETTINGS_URL .. "/PasswordData.json", Method = "GET" })
+        if not res or res.StatusCode ~= 200 or not res.Body or res.Body == "null" or res.Body == "" then
+            return false, "БАЗАДА КІЛТ ЖОҚ"
+        end
+
+        local decoded = HttpService:JSONDecode(res.Body)
+        if type(decoded) ~= "table" or not decoded.Password or tostring(decoded.Password) == "" then
+            return false, "БАЗАДА КІЛТ ЖОҚ"
+        end
+
+        local expireTs = tonumber(decoded.ExpireTime) or 0
+        if expireTs ~= 0 and os.time() >= expireTs then
+            return false, "КІЛТ МЕРЗІМІ БІТТІ"
+        end
+
+        if tostring(enteredKey) == tostring(decoded.Password) then
+            return true, "БАЗА КІЛТІ РАСТАЛДЫ"
+        else
+            return false, "КІЛТ СӘЙКЕС ЕМЕС"
+        end
+    end)
+
+    if not ok then
+        return false, "БАЗАҒА ҚОСЫЛУ ҚАТЕСІ"
+    end
+
+    return isValid, reason
+end
 -- =====================================================================
--- NURLYKHAN CYBERPUNK USER SCRIPT // PART 2 OF 3
+-- NURLYKHAN FIREBASE STRICT KEY GATE // PART 2 OF 3
 -- =====================================================================
 
 task.spawn(function()
@@ -215,20 +252,6 @@ task.spawn(function()
     end
 end)
 
-local currentPassword = "1921"
-
-pcall(function()
-    local passRes = request({ Url = SETTINGS_URL .. "/PasswordData.json", Method = "GET" })
-    if passRes and passRes.StatusCode == 200 and passRes.Body ~= "null" then
-        local pData = HttpService:JSONDecode(passRes.Body)
-        if type(pData) == "table" and pData.Password and tostring(pData.Password) ~= "" then
-            if pData.ExpireTime == 0 or os.time() < pData.ExpireTime then
-                currentPassword = tostring(pData.Password)
-            end
-        end
-    end
-end)
-
 local isLaunchingHub = false
 
 local function launchMainScriptOnce()
@@ -270,209 +293,357 @@ local function registerActiveUser()
 end
 
 local CoreGui = game:GetService("CoreGui")
-local oldGui = CoreGui:FindFirstChild("NurlykhanHubPass")
-if oldGui then oldGui:Destroy() end
+local function attachGui(gui)
+    pcall(function() gui.Parent = CoreGui end)
+    if not gui.Parent then gui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NurlykhanHubPass"
-ScreenGui.ResetOnSpawn = false
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+local oldIntro = CoreGui:FindFirstChild("NurlykhanGreetingIntro")
+if oldIntro then oldIntro:Destroy() end
+
+local IntroGui = Instance.new("ScreenGui")
+IntroGui.Name = "NurlykhanGreetingIntro"
+IntroGui.ResetOnSpawn = false
+attachGui(IntroGui)
+
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Size = UDim2.new(0, 320, 0, 290)
+IntroFrame.Position = UDim2.new(0.5, -160, 0.5, -145)
+IntroFrame.BackgroundColor3 = Color3.fromRGB(6, 10, 18)
+IntroFrame.BackgroundTransparency = 0.2
+IntroFrame.BorderSizePixel = 0
+IntroFrame.Parent = IntroGui
+Instance.new("UICorner", IntroFrame).CornerRadius = UDim.new(0, 12)
+local introStroke = Instance.new("UIStroke")
+introStroke.Color = Color3.fromRGB(0, 245, 212)
+introStroke.Thickness = 2
+introStroke.Parent = IntroFrame
+
+local HelloBanner = Instance.new("TextLabel")
+HelloBanner.Size = UDim2.new(1, -20, 0, 42)
+HelloBanner.Position = UDim2.new(0, 10, 0, 10)
+HelloBanner.BackgroundColor3 = Color3.fromRGB(14, 24, 38)
+HelloBanner.BackgroundTransparency = 0.25
+HelloBanner.Text = "Сәлем!"
+HelloBanner.TextColor3 = Color3.fromRGB(0, 255, 136)
+HelloBanner.TextSize = 24
+HelloBanner.Font = Enum.Font.Code
+HelloBanner.Parent = IntroFrame
+Instance.new("UICorner", HelloBanner).CornerRadius = UDim.new(0, 8)
+local hStroke = Instance.new("UIStroke")
+hStroke.Color = Color3.fromRGB(255, 0, 110)
+hStroke.Thickness = 1.4
+hStroke.Parent = HelloBanner
+
+local IntroViewport = Instance.new("ViewportFrame")
+IntroViewport.Size = UDim2.new(1, -20, 1, -66)
+IntroViewport.Position = UDim2.new(0, 10, 0, 58)
+IntroViewport.BackgroundTransparency = 1
+IntroViewport.Parent = IntroFrame
+
+local introWorld = Instance.new("WorldModel")
+introWorld.Parent = IntroViewport
+local introCam = Instance.new("Camera")
+introCam.Parent = IntroViewport
+IntroViewport.CurrentCamera = introCam
+
+task.spawn(function()
+    pcall(function()
+        local dummy = Players:CreateHumanoidModelFromUserId(MY_ROBLOX_USER_ID)
+        dummy.Parent = introWorld
+        local head = dummy:FindFirstChild("Head")
+        local root = dummy:FindFirstChild("HumanoidRootPart") or head
+
+        if head then
+            local bbg = Instance.new("BillboardGui")
+            bbg.Size = UDim2.new(0, 160, 0, 44)
+            bbg.StudsOffset = Vector3.new(0, 2.4, 0)
+            bbg.AlwaysOnTop = true
+            bbg.Parent = head
+
+            local waveLabel = Instance.new("TextLabel")
+            waveLabel.Size = UDim2.new(1, 0, 1, 0)
+            waveLabel.BackgroundTransparency = 1
+            waveLabel.Text = "Сәлем!"
+            waveLabel.TextColor3 = Color3.fromRGB(0, 245, 212)
+            waveLabel.TextSize = 20
+            waveLabel.Font = Enum.Font.Code
+            waveLabel.TextStrokeTransparency = 0
+            waveLabel.Parent = bbg
+        end
+
+        local rUpper = dummy:FindFirstChild("RightUpperArm")
+        local rLower = dummy:FindFirstChild("RightLowerArm")
+        local rArmR6 = dummy:FindFirstChild("Right Arm")
+
+        if root then
+            dummy:SetPrimaryPartCFrame(CFrame.new(0, -0.4, 0))
+            introCam.CFrame = CFrame.new(Vector3.new(0, 0.7, 5.4), Vector3.new(0, 0.2, 0))
+
+            local elapsed = 0
+            local conn
+            conn = RunService.RenderStepped:Connect(function(dt)
+                if not IntroGui or not IntroGui.Parent then
+                    if conn then conn:Disconnect() end
+                    return
+                end
+                elapsed = elapsed + dt
+                local waveAngle = math.sin(elapsed * 9) * 0.45
+
+                if rUpper then
+                    rUpper.CFrame = root.CFrame * CFrame.new(1.35, 0.65, 0) * CFrame.Angles(math.rad(150), 0, math.rad(-25) + waveAngle)
+                    if rLower then
+                        rLower.CFrame = rUpper.CFrame * CFrame.new(0, -0.55, 0) * CFrame.Angles(math.rad(-25), 0, waveAngle * 0.5)
+                    end
+                elseif rArmR6 then
+                    rArmR6.CFrame = root.CFrame * CFrame.new(1.5, 0.7, 0) * CFrame.Angles(math.rad(155), 0, math.rad(-20) + waveAngle)
+                end
+            end)
+        end
+    end)
+end)
+
+task.wait(3.2)
+if IntroGui and IntroGui.Parent then
+    IntroGui:Destroy()
+end
+-- =====================================================================
+-- NURLYKHAN FIREBASE STRICT KEY GATE // PART 3 OF 3
+-- =====================================================================
+
+local oldPass = CoreGui:FindFirstChild("NurlykhanCyberGate")
+if oldPass then oldPass:Destroy() end
+
+local GateGui = Instance.new("ScreenGui")
+GateGui.Name = "NurlykhanCyberGate"
+GateGui.ResetOnSpawn = false
+attachGui(GateGui)
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 450, 0, 245)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -122)
-MainFrame.BackgroundColor3 = Color3.fromRGB(7, 11, 18)
-MainFrame.BackgroundTransparency = 0.22
+MainFrame.Size = UDim2.new(0, 470, 0, 255)
+MainFrame.Position = UDim2.new(0.5, -235, 0.5, -127)
+MainFrame.BackgroundColor3 = Color3.fromRGB(6, 10, 18)
+MainFrame.BackgroundTransparency = 0.2
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+MainFrame.Parent = GateGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(0, 245, 212)
-stroke.Thickness = 2
-stroke.Parent = MainFrame
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(0, 245, 212)
+mainStroke.Thickness = 2
+mainStroke.Parent = MainFrame
 
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 3)
-TopBar.Position = UDim2.new(0, 0, 0, 0)
-TopBar.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
-TopBar.BorderSizePixel = 0
-TopBar.ZIndex = 5
-TopBar.Parent = MainFrame
+local TopNeon = Instance.new("Frame")
+TopNeon.Size = UDim2.new(1, 0, 0, 3)
+TopNeon.Position = UDim2.new(0, 0, 0, 0)
+TopNeon.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
+TopNeon.BorderSizePixel = 0
+TopNeon.ZIndex = 6
+TopNeon.Parent = MainFrame
 
-local MatrixHolder = Instance.new("Frame")
-MatrixHolder.Size = UDim2.new(1, 0, 1, 0)
-MatrixHolder.BackgroundTransparency = 1
-MatrixHolder.ClipsDescendants = true
-MatrixHolder.ZIndex = 1
-MatrixHolder.Parent = MainFrame
+local MatrixBg = Instance.new("Frame")
+MatrixBg.Size = UDim2.new(1, 0, 1, 0)
+MatrixBg.BackgroundTransparency = 1
+MatrixBg.ClipsDescendants = true
+MatrixBg.ZIndex = 1
+MatrixBg.Parent = MainFrame
 
-local chars = {"0", "1", "X", "K", "P", "7", "9", "#", "$", "%", "/", ">", "_"}
+local glyphs = {"0", "1", "X", "K", "P", "7", "9", "#", "$", "/", ">", "_"}
 for i = 1, 22 do
     task.spawn(function()
-        local colLabel = Instance.new("TextLabel")
-        colLabel.Size = UDim2.new(0, 22, 1, 0)
-        colLabel.Position = UDim2.new((i - 1) * 0.045, 0, 0, 0)
-        colLabel.BackgroundTransparency = 1
-        colLabel.TextColor3 = (i % 4 == 0) and Color3.fromRGB(0, 245, 212) or Color3.fromRGB(0, 255, 95)
-        colLabel.TextTransparency = 0.65
-        colLabel.TextSize = 11
-        colLabel.Font = Enum.Font.Code
-        colLabel.TextYAlignment = Enum.TextYAlignment.Top
-        colLabel.ZIndex = 1
-        colLabel.Parent = MatrixHolder
+        local col = Instance.new("TextLabel")
+        col.Size = UDim2.new(0, 22, 1, 0)
+        col.Position = UDim2.new((i - 1) * 0.045, 0, 0, 0)
+        col.BackgroundTransparency = 1
+        col.TextColor3 = (i % 3 == 0) and Color3.fromRGB(255, 0, 110) or Color3.fromRGB(0, 245, 212)
+        col.TextTransparency = 0.72
+        col.TextSize = 11
+        col.Font = Enum.Font.Code
+        col.TextYAlignment = Enum.TextYAlignment.Top
+        col.ZIndex = 1
+        col.Parent = MatrixBg
         while MainFrame and MainFrame.Parent do
-            local txt = ""
-            for j = 1, 16 do txt = txt .. chars[math.random(1, #chars)] .. "\n" end
-            colLabel.Text = txt
+            local s = ""
+            for j = 1, 16 do s = s .. glyphs[math.random(1, #glyphs)] .. "\n" end
+            col.Text = s
             task.wait(math.random(1, 3) * 0.1)
         end
     end)
 end
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 34)
-Title.Position = UDim2.new(0, 10, 0, 6)
-Title.BackgroundTransparency = 1
-Title.Text = "NURLYKHAN // CYBER GATE v2.6"
-Title.TextColor3 = Color3.fromRGB(0, 245, 212)
-Title.TextSize = 16
-Title.Font = Enum.Font.Code
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 4
-Title.Parent = MainFrame
+local Header = Instance.new("TextLabel")
+Header.Size = UDim2.new(0.65, 0, 0, 32)
+Header.Position = UDim2.new(0, 12, 0, 6)
+Header.BackgroundTransparency = 1
+Header.Text = "CYBERPUNK // SCANNER GATE"
+Header.TextColor3 = Color3.fromRGB(0, 245, 212)
+Header.TextSize = 15
+Header.Font = Enum.Font.Code
+Header.TextXAlignment = Enum.TextXAlignment.Left
+Header.ZIndex = 4
+Header.Parent = MainFrame
 
-local SubTag = Instance.new("TextLabel")
-SubTag.Size = UDim2.new(0, 140, 0, 20)
-SubTag.Position = UDim2.new(1, -150, 0, 13)
-SubTag.BackgroundTransparency = 1
-SubTag.Text = "[ENCRYPTED]"
-SubTag.TextColor3 = Color3.fromRGB(255, 0, 110)
-SubTag.TextSize = 11
-SubTag.Font = Enum.Font.Code
-SubTag.TextXAlignment = Enum.TextXAlignment.Right
-SubTag.ZIndex = 4
-SubTag.Parent = MainFrame
--- =====================================================================
--- NURLYKHAN CYBERPUNK USER SCRIPT // PART 3 OF 3
--- =====================================================================
+local KeyBadge = Instance.new("TextLabel")
+KeyBadge.Size = UDim2.new(0.32, 0, 0, 22)
+KeyBadge.Position = UDim2.new(0.66, 0, 0, 11)
+KeyBadge.BackgroundTransparency = 1
+KeyBadge.Text = "FIREBASE ONLY"
+KeyBadge.TextColor3 = Color3.fromRGB(255, 0, 110)
+KeyBadge.TextSize = 11
+KeyBadge.Font = Enum.Font.Code
+KeyBadge.TextXAlignment = Enum.TextXAlignment.Right
+KeyBadge.ZIndex = 4
+KeyBadge.Parent = MainFrame
 
-local AvatarCard = Instance.new("Frame")
-AvatarCard.Size = UDim2.new(0.37, 0, 0.74, 0)
-AvatarCard.Position = UDim2.new(0.03, 0, 0.19, 0)
-AvatarCard.BackgroundColor3 = Color3.fromRGB(10, 18, 28)
-AvatarCard.BackgroundTransparency = 0.35
-AvatarCard.BorderSizePixel = 0
-AvatarCard.ZIndex = 3
-AvatarCard.Parent = MainFrame
-Instance.new("UICorner", AvatarCard).CornerRadius = UDim.new(0, 8)
-local avStroke = Instance.new("UIStroke")
-avStroke.Color = Color3.fromRGB(255, 0, 110)
-avStroke.Thickness = 1.4
-avStroke.Parent = AvatarCard
+local LeftScannerBox = Instance.new("Frame")
+LeftScannerBox.Size = UDim2.new(0.38, 0, 0.76, 0)
+LeftScannerBox.Position = UDim2.new(0.03, 0, 0.18, 0)
+LeftScannerBox.BackgroundColor3 = Color3.fromRGB(8, 16, 28)
+LeftScannerBox.BackgroundTransparency = 0.28
+LeftScannerBox.BorderSizePixel = 0
+LeftScannerBox.ClipsDescendants = true
+LeftScannerBox.ZIndex = 3
+LeftScannerBox.Parent = MainFrame
+Instance.new("UICorner", LeftScannerBox).CornerRadius = UDim.new(0, 8)
+local scanStroke = Instance.new("UIStroke")
+scanStroke.Color = Color3.fromRGB(0, 245, 212)
+scanStroke.Thickness = 1.6
+scanStroke.Parent = LeftScannerBox
 
-local Viewport = Instance.new("ViewportFrame")
-Viewport.Size = UDim2.new(1, 0, 1, 0)
-Viewport.BackgroundTransparency = 1
-Viewport.ZIndex = 4
-Viewport.Parent = AvatarCard
+local SkinViewport = Instance.new("ViewportFrame")
+SkinViewport.Size = UDim2.new(1, 0, 1, 0)
+SkinViewport.BackgroundTransparency = 1
+SkinViewport.ZIndex = 4
+SkinViewport.Parent = LeftScannerBox
 
-local worldModel = Instance.new("WorldModel")
-worldModel.Parent = Viewport
-local camera = Instance.new("Camera")
-camera.Parent = Viewport
-Viewport.CurrentCamera = camera
+local scanWorld = Instance.new("WorldModel")
+scanWorld.Parent = SkinViewport
+local scanCam = Instance.new("Camera")
+scanCam.Parent = SkinViewport
+SkinViewport.CurrentCamera = scanCam
+
+local ScannerBeam = Instance.new("Frame")
+ScannerBeam.Size = UDim2.new(1, 0, 0, 3)
+ScannerBeam.Position = UDim2.new(0, 0, 0, 0)
+ScannerBeam.BackgroundColor3 = Color3.fromRGB(0, 255, 136)
+ScannerBeam.BorderSizePixel = 0
+ScannerBeam.ZIndex = 6
+ScannerBeam.Parent = LeftScannerBox
+
+local ScannerGlow = Instance.new("Frame")
+ScannerGlow.Size = UDim2.new(1, 0, 0, 26)
+ScannerGlow.Position = UDim2.new(0, 0, 0, -12)
+ScannerGlow.BackgroundColor3 = Color3.fromRGB(0, 245, 212)
+ScannerGlow.BackgroundTransparency = 0.78
+ScannerGlow.BorderSizePixel = 0
+ScannerGlow.ZIndex = 5
+ScannerGlow.Parent = LeftScannerBox
+
+task.spawn(function()
+    while LeftScannerBox and LeftScannerBox.Parent do
+        local downTween = TweenService:Create(ScannerBeam, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Position = UDim2.new(0, 0, 1, -3)})
+        local glowDown = TweenService:Create(ScannerGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Position = UDim2.new(0, 0, 1, -14)})
+        downTween:Play()
+        glowDown:Play()
+        downTween.Completed:Wait()
+
+        local upTween = TweenService:Create(ScannerBeam, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Position = UDim2.new(0, 0, 0, 0)})
+        local glowUp = TweenService:Create(ScannerGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Position = UDim2.new(0, 0, 0, -12)})
+        upTween:Play()
+        glowUp:Play()
+        upTween.Completed:Wait()
+    end
+end)
 
 task.spawn(function()
     pcall(function()
         local dummy = Players:CreateHumanoidModelFromUserId(MY_ROBLOX_USER_ID)
-        dummy.Parent = worldModel
+        dummy.Parent = scanWorld
         local head = dummy:FindFirstChild("Head")
         local root = dummy:FindFirstChild("HumanoidRootPart") or head
         if head then
             local bbg = Instance.new("BillboardGui")
-            bbg.Size = UDim2.new(0, 150, 0, 36)
+            bbg.Size = UDim2.new(0, 140, 0, 32)
             bbg.StudsOffset = Vector3.new(0, 2.2, 0)
             bbg.AlwaysOnTop = true
             bbg.Parent = head
-            local txt = Instance.new("TextLabel")
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.Text = "@Xakep_2035"
-            txt.TextColor3 = Color3.fromRGB(0, 245, 212)
-            txt.TextSize = 13
-            txt.Font = Enum.Font.Code
-            txt.TextStrokeTransparency = 0
-            txt.Parent = bbg
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 1, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = "SCAN // Xakep_2035"
+            lbl.TextColor3 = Color3.fromRGB(0, 255, 136)
+            lbl.TextSize = 12
+            lbl.Font = Enum.Font.Code
+            lbl.TextStrokeTransparency = 0
+            lbl.Parent = bbg
         end
         if root then
             dummy:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
-            camera.CFrame = CFrame.new(Vector3.new(0, 0.8, 5.5), Vector3.new(0, 0, 0))
+            scanCam.CFrame = CFrame.new(Vector3.new(0, 0.8, 5.5), Vector3.new(0, 0, 0))
             local angle = 0
-            local spinConnection
-            spinConnection = RunService.RenderStepped:Connect(function(dt)
-                if not ScreenGui or not ScreenGui.Parent or not MainFrame or not MainFrame.Parent then
-                    spinConnection:Disconnect()
+            local spinConn
+            spinConn = RunService.RenderStepped:Connect(function(dt)
+                if not GateGui or not GateGui.Parent or not MainFrame or not MainFrame.Parent then
+                    if spinConn then spinConn:Disconnect() end
                     return
                 end
-                angle = angle + (dt * 2.1)
+                angle = angle + (dt * 2.2)
                 dummy:SetPrimaryPartCFrame(CFrame.new(0, -0.5, 0) * CFrame.Angles(0, angle, 0))
             end)
         end
     end)
 end)
 
-local StatusLine = Instance.new("TextLabel")
-StatusLine.Size = UDim2.new(0.54, 0, 0, 20)
-StatusLine.Position = UDim2.new(0.43, 0, 0.21, 0)
-StatusLine.BackgroundTransparency = 1
-StatusLine.Text = "> ENTER ACCESS KEY_"
-StatusLine.TextColor3 = Color3.fromRGB(130, 255, 190)
-StatusLine.TextSize = 12
-StatusLine.Font = Enum.Font.Code
-StatusLine.TextXAlignment = Enum.TextXAlignment.Left
-StatusLine.ZIndex = 4
-StatusLine.Parent = MainFrame
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0.54, 0, 0, 20)
+StatusLabel.Position = UDim2.new(0.43, 0, 0.20, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "> FIREBASE KEY REQUIRED_"
+StatusLabel.TextColor3 = Color3.fromRGB(0, 245, 212)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.ZIndex = 4
+StatusLabel.Parent = MainFrame
 
-local PassBox = Instance.new("TextBox")
-PassBox.Size = UDim2.new(0.54, 0, 0, 40)
-PassBox.Position = UDim2.new(0.43, 0, 0.33, 0)
-PassBox.BackgroundColor3 = Color3.fromRGB(12, 18, 28)
-PassBox.BackgroundTransparency = 0.22
-PassBox.TextColor3 = Color3.fromRGB(0, 245, 212)
-PassBox.PlaceholderColor3 = Color3.fromRGB(90, 140, 145)
-PassBox.PlaceholderText = "Парольді жаз..."
-PassBox.Text = ""
-PassBox.TextSize = 14
-PassBox.Font = Enum.Font.Code
-PassBox.ZIndex = 4
-PassBox.Parent = MainFrame
-Instance.new("UICorner", PassBox).CornerRadius = UDim.new(0, 6)
-local pStroke = Instance.new("UIStroke")
-pStroke.Color = Color3.fromRGB(0, 245, 212)
-pStroke.Thickness = 1.4
-pStroke.Parent = PassBox
+local KeyInput = Instance.new("TextBox")
+KeyInput.Size = UDim2.new(0.54, 0, 0, 40)
+KeyInput.Position = UDim2.new(0.43, 0, 0.32, 0)
+KeyInput.BackgroundColor3 = Color3.fromRGB(11, 18, 29)
+KeyInput.BackgroundTransparency = 0.22
+KeyInput.TextColor3 = Color3.fromRGB(0, 245, 212)
+KeyInput.PlaceholderColor3 = Color3.fromRGB(95, 135, 145)
+KeyInput.PlaceholderText = "Базадағы кілтті жаз..."
+KeyInput.Text = ""
+KeyInput.TextSize = 14
+KeyInput.Font = Enum.Font.Code
+KeyInput.ZIndex = 4
+KeyInput.Parent = MainFrame
+Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 6)
+local kStroke = Instance.new("UIStroke")
+kStroke.Color = Color3.fromRGB(0, 245, 212)
+kStroke.Thickness = 1.4
+kStroke.Parent = KeyInput
 
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0.54, 0, 0, 40)
-SubmitBtn.Position = UDim2.new(0.43, 0, 0.58, 0)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
-SubmitBtn.BackgroundTransparency = 0.12
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.Text = "ACCESS // КІРУ"
-SubmitBtn.TextSize = 14
-SubmitBtn.Font = Enum.Font.Code
-SubmitBtn.ZIndex = 4
-SubmitBtn.Parent = MainFrame
-Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
-local bStroke = Instance.new("UIStroke")
-bStroke.Color = Color3.fromRGB(0, 245, 212)
-bStroke.Thickness = 1.2
-bStroke.Parent = SubmitBtn
+local UnlockBtn = Instance.new("TextButton")
+UnlockBtn.Size = UDim2.new(0.54, 0, 0, 40)
+UnlockBtn.Position = UDim2.new(0.43, 0, 0.56, 0)
+UnlockBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
+UnlockBtn.BackgroundTransparency = 0.12
+UnlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnlockBtn.Text = "UNLOCK // КІРУ"
+UnlockBtn.TextSize = 14
+UnlockBtn.Font = Enum.Font.Code
+UnlockBtn.ZIndex = 4
+UnlockBtn.Parent = MainFrame
+Instance.new("UICorner", UnlockBtn).CornerRadius = UDim.new(0, 6)
+local uStroke = Instance.new("UIStroke")
+uStroke.Color = Color3.fromRGB(0, 245, 212)
+uStroke.Thickness = 1.2
+uStroke.Parent = UnlockBtn
 
 local ResizeBtn = Instance.new("TextButton")
 ResizeBtn.Size = UDim2.new(0, 18, 0, 18)
@@ -482,7 +653,7 @@ ResizeBtn.TextColor3 = Color3.fromRGB(5, 10, 15)
 ResizeBtn.Text = "↘"
 ResizeBtn.TextSize = 12
 ResizeBtn.Font = Enum.Font.Code
-ResizeBtn.ZIndex = 5
+ResizeBtn.ZIndex = 6
 ResizeBtn.Parent = MainFrame
 Instance.new("UICorner", ResizeBtn).CornerRadius = UDim.new(0, 4)
 
@@ -495,34 +666,38 @@ ResizeBtn.InputBegan:Connect(function(input)
         startSize = MainFrame.Size
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if isResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - startInput
-        local newX = math.max(360, startSize.X.Offset + delta.X)
-        local newY = math.max(200, startSize.Y.Offset + delta.Y)
+        local newX = math.max(380, startSize.X.Offset + delta.X)
+        local newY = math.max(210, startSize.Y.Offset + delta.Y)
         MainFrame.Size = UDim2.new(0, newX, 0, newY)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isResizing = false
     end
 end)
 
-SubmitBtn.MouseButton1Click:Connect(function()
-    if tostring(PassBox.Text) == tostring(currentPassword) then
-        SubmitBtn.Text = "GRANTED!"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 130)
+UnlockBtn.MouseButton1Click:Connect(function()
+    UnlockBtn.Text = "CHECKING..."
+    local valid, statusText = validateFirebaseOnlyKey(KeyInput.Text)
+    StatusLabel.Text = "> " .. statusText
+
+    if valid then
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 136)
+        UnlockBtn.Text = "ACCESS GRANTED!"
+        UnlockBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 120)
         task.wait(0.35)
-        ScreenGui:Destroy()
+        GateGui:Destroy()
         registerActiveUser()
     else
-        SubmitBtn.Text = "DENIED!"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 110)
+        UnlockBtn.Text = "DENIED!"
+        UnlockBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
         task.wait(1.4)
-        SubmitBtn.Text = "ACCESS // КІРУ"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
+        UnlockBtn.Text = "UNLOCK // КІРУ"
+        UnlockBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 110)
     end
 end)
